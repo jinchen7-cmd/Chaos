@@ -1,4 +1,4 @@
-# chaos-ml
+# Chaos
 
 **Can a neural network see a collapse coming before it happens — in a system it never trained on?**
 
@@ -49,8 +49,8 @@ The food-chain demo above is one instance of a general recipe. Here it is again 
 ## Regenerate it yourself
 
 ```bash
-git clone https://github.com/jinchen7-cmd/chaos-ml.git
-cd chaos-ml
+git clone https://github.com/jinchen7-cmd/Chaos.git
+cd Chaos
 pip install -r requirements.txt
 python scripts/generate_demo.py          # food chain
 python scripts/generate_demo_ikeda.py    # Ikeda map
