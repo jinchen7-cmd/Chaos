@@ -23,16 +23,43 @@ Because the system is chaotic, the two trajectories can't stay identical forever
 
 This is a reproduction of the method from [Kong, Fan, Grebogi & Lai (2021), *Physical Review Research* 3, 013090](https://doi.org/10.1103/PhysRevResearch.3.013090) — "Machine learning prediction of critical transition and system collapse."
 
+## Gallery: the same method, different chaos
+
+The food-chain demo above is one instance of a general recipe. Here it is again on two more classic chaotic systems.
+
+<table>
+<tr>
+<td width="50%">
+
+**Ikeda map** — a nonlinear optical cavity, iterated as a discrete map instead of an ODE. Trained on `mu ≤ 0.97`, tested at `mu = 1.02`: the model flags the cavity's blow-up almost as early as the true map does.
+
+![RC flags an Ikeda map blow-up it never trained on](assets/ikeda_collapse.gif)
+
+</td>
+<td width="50%">
+
+**Lorenz system** — the original chaos icon, no critical transition here, just sustained chaos. An Echo State Network trained on one-step prediction is cut loose to generate its *own* trajectory with no ground truth at all. It can't track the true path forever (that's chaos), but it keeps landing back on the same two-winged butterfly attractor instead of blowing up or flatlining.
+
+![A reservoir computer freely generating the Lorenz butterfly attractor](assets/lorenz_freerun.gif)
+
+</td>
+</tr>
+</table>
+
 ## Regenerate it yourself
 
 ```bash
 git clone https://github.com/jinchen7-cmd/chaos-ml.git
 cd chaos-ml
 pip install -r requirements.txt
-python scripts/generate_demo.py
+python scripts/generate_demo.py          # food chain
+python scripts/generate_demo_ikeda.py    # Ikeda map
+python scripts/generate_demo_lorenz.py   # Lorenz butterfly
 ```
 
-Takes under a minute on a laptop CPU. Tweak `K_TEST`, `N_STEPS`, or the reservoir hyperparameters in [`scripts/generate_demo.py`](scripts/generate_demo.py) to explore other regimes.
+Each takes well under a minute on a laptop CPU. Tweak the test parameter, step count, or reservoir hyperparameters at the top of each script to explore other regimes.
+
+A note on the timing match in the food-chain and Ikeda demos: both are *transient chaos* — post-critical trajectories eventually collapse, but chaos makes the exact collapse step for any one run highly sensitive to the starting state. The paper's actual claim (and the right way to evaluate this) is statistical — matching the *distribution* of collapse times over many runs, via `scan_critical_point` and `ensemble_predict` in the underlying package — not a single-trajectory race. The animations pick one representative starting point each; run the scripts with a different offset and the exact step numbers will shift.
 
 ## The rest of the ecosystem
 
