@@ -14,7 +14,7 @@ That unpredictability is the whole problem this repo is about — and the rest o
 
 A reservoir-computing model is trained on three *stable* simulations of a three-species food chain (resource → consumer → predator). It never sees a single collapse during training. Then it's handed a new, harder parameter setting and left to run freely — no more ground truth, just its own predictions feeding back into itself. It anticipates the predator's extinction almost as early as the real equations do.
 
-This repo is the visual front door to a small ecosystem of chaos + machine-learning projects. Start with the toy above, read the "why" below, then follow the links for the code and the paper.
+Start with the toy above, then read on for how the prediction actually works.
 
 ---
 
@@ -68,13 +68,6 @@ python scripts/generate_demo_lorenz.py   # Lorenz butterfly
 Each takes well under a minute on a laptop CPU. Tweak the test parameter, step count, or reservoir hyperparameters at the top of each script to explore other regimes.
 
 A note on the timing match in the food-chain and Ikeda demos: both are *transient chaos* — post-critical trajectories eventually collapse, but chaos makes the exact collapse step for any one run highly sensitive to the starting state. The paper's actual claim (and the right way to evaluate this) is statistical — matching the *distribution* of collapse times over many runs, via `scan_critical_point` and `ensemble_predict` in the underlying package — not a single-trajectory race. The animations pick one representative starting point each; run the scripts with a different offset and the exact step numbers will shift.
-
-## The rest of the ecosystem
-
-| Repo | What it is |
-|---|---|
-| [**Reservoir-Computing**](https://github.com/jinchen7-cmd/Reservoir-Computing) | `rc_prediction` — the actual Python package behind this demo. Published on [PyPI](https://pypi.org/project/rc-prediction/), tested, documented. Implements parameter-aware reservoir computing for critical-transition prediction across the Ikeda map, this food chain, and the Kuramoto–Sivashinsky equation. |
-| [**RC-SINDy-Ecosystem**](https://github.com/jinchen7-cmd/RC-SINDy-Ecosystem) | A research write-up comparing reservoir computing against SINDy (sparse identification of nonlinear dynamics) for discovering the governing equations of chaotic ecological systems — Lorenz, Lotka–Volterra, Hastings–Powell, Beddington–DeAngelis. |
 
 ## Why this matters
 
