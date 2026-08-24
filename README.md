@@ -1,12 +1,20 @@
 # Chaos
 
+### 🦋 [Play with the Butterfly Effect →](https://jinchen7-cmd.github.io/Chaos/butterfly-effect.html)
+
+Sixteen physics-accurate double pendulums, released a hair's width apart. Drag to set an angle, let go, and watch identical starting conditions fan out into total disagreement in a couple of seconds — with a live readout of *how fast* they disagree, which is the actual mathematical signature of chaos (a Lyapunov exponent), not just a vibe.
+
+That unpredictability is the whole problem this repo is about — and the rest of it is about clawing some of it back with machine learning.
+
+---
+
 **Can a neural network see a collapse coming before it happens — in a system it never trained on?**
 
 ![Reservoir computing predicting a predator population collapse it was never trained on](assets/collapse_prediction.gif)
 
 A reservoir-computing model is trained on three *stable* simulations of a three-species food chain (resource → consumer → predator). It never sees a single collapse during training. Then it's handed a new, harder parameter setting and left to run freely — no more ground truth, just its own predictions feeding back into itself. It anticipates the predator's extinction almost as early as the real equations do.
 
-This repo is the visual front door to a small ecosystem of chaos + machine-learning projects. Start here for the "why," then follow the links below for the code and the paper.
+This repo is the visual front door to a small ecosystem of chaos + machine-learning projects. Start with the toy above, read the "why" below, then follow the links for the code and the paper.
 
 ---
 

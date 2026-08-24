@@ -1,0 +1,613 @@
+<title>The Butterfly Effect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c12;
+    --bg-raised: #12141e;
+    --bg-raised-2: #191c29;
+    --ink: #eef1f7;
+    --ink-dim: #838aa0;
+    --line: #262b3c;
+    --accent: #ffb340;
+    --accent-dim: #6b4d1e;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+  }
+
+  #stage {
+    position: fixed;
+    inset: 0;
+    display: block;
+    touch-action: none;
+    cursor: grab;
+    background: var(--bg);
+  }
+  #stage.dragging { cursor: grabbing; }
+
+  .scrim {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: min(34vh, 320px);
+    background: linear-gradient(180deg, rgba(10,12,18,0.86) 0%, rgba(10,12,18,0.55) 55%, rgba(10,12,18,0) 100%);
+    pointer-events: none;
+  }
+
+  header {
+    position: fixed;
+    top: 0; left: 0;
+    max-width: min(640px, 66vw);
+    padding: clamp(20px, 4vw, 44px) 0 0 clamp(20px, 4vw, 44px);
+    pointer-events: none;
+  }
+
+  @media (max-width: 560px) {
+    header { max-width: calc(100vw - 40px); }
+    .credit { display: none; }
+  }
+
+  h1 {
+    margin: 0;
+    font-family: "Instrument Serif", Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: clamp(2.1rem, 6vw, 4.2rem);
+    line-height: 1.02;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+
+  .sub {
+    margin: 0.6em 0 0;
+    max-width: 34em;
+    font-size: clamp(0.92rem, 1.6vw, 1.08rem);
+    line-height: 1.5;
+    color: var(--ink-dim);
+    text-wrap: balance;
+  }
+
+  .sub b { color: var(--ink); font-weight: 500; }
+
+  .credit {
+    position: fixed;
+    top: clamp(20px, 4vw, 44px);
+    right: clamp(20px, 4vw, 44px);
+    text-align: right;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+    color: var(--ink-dim);
+    line-height: 1.6;
+  }
+  .credit a {
+    color: var(--ink-dim);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line);
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .credit a:hover { color: var(--accent); border-color: var(--accent-dim); }
+
+  .dock {
+    position: fixed;
+    left: 50%;
+    bottom: clamp(14px, 3vw, 28px);
+    transform: translateX(-50%);
+    display: flex;
+    align-items: stretch;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+    max-width: calc(100vw - 24px);
+  }
+
+  .panel {
+    background: var(--bg-raised);
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    min-width: 128px;
+  }
+
+  .panel .label {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .panel .label .val {
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 108px;
+    height: 3px;
+    background: var(--line);
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 0 3px rgba(255,179,64,0.18);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border: none;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 0 3px rgba(255,179,64,0.18);
+  }
+
+  .btnrow { display: flex; gap: 8px; align-items: center; justify-content: center; }
+
+  button {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink);
+    background: var(--bg-raised-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 7px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  button:hover { border-color: var(--accent-dim); color: var(--accent); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .readout {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    padding: 12px 16px;
+    background: var(--bg-raised);
+    min-width: 150px;
+  }
+  .readout .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    color: var(--ink-dim);
+  }
+  .readout .row .v {
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  #spark { display: block; margin-top: 2px; }
+
+  .hint {
+    position: fixed;
+    left: 50%;
+    bottom: calc(clamp(14px, 3vw, 28px) + 78px);
+    transform: translateX(-50%);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    color: var(--ink-dim);
+    letter-spacing: 0.02em;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease 2.4s;
+  }
+  .hint.show { opacity: 1; }
+
+  @media (max-width: 640px) {
+    .dock { flex-wrap: wrap; border-radius: 12px; }
+    .panel, .readout { min-width: 0; flex: 1 1 42%; }
+  }
+</style>
+
+<canvas id="stage"></canvas>
+<div class="scrim"></div>
+
+<header>
+  <h1>The Butterfly&nbsp;Effect</h1>
+  <p class="sub">Sixteen pendulums, released a hair's width apart. <b>Drag the canvas</b> to set an angle and let go &mdash; watch how little it takes for identical starts to stop agreeing.</p>
+</header>
+
+<div class="credit">
+  a real, physics-accurate double pendulum<br>
+  from a research project on <a href="https://github.com/jinchen7-cmd/Chaos" target="_blank" rel="noopener">predicting chaos with ML &rarr;</a>
+</div>
+
+<div class="hint" id="hint">click and drag anywhere</div>
+
+<div class="dock">
+  <div class="panel">
+    <div class="label"><span>nudge &Delta;&theta;</span><span class="val" id="epsVal">1&times;10&#8315;&#8310;</span></div>
+    <input type="range" id="epsSlider" min="0" max="100" value="40" aria-label="Initial angle nudge">
+    <div class="label" style="margin-top:2px;"><span>swarm size</span><span class="val" id="nVal">16</span></div>
+    <input type="range" id="nSlider" min="3" max="36" value="16" aria-label="Number of pendulums">
+  </div>
+  <div class="panel">
+    <div class="btnrow">
+      <button id="pauseBtn">Pause</button>
+      <button id="relaunchBtn">Relaunch</button>
+    </div>
+    <div class="btnrow" style="margin-top:2px;">
+      <button id="trailBtn">Trails: On</button>
+    </div>
+  </div>
+  <div class="readout">
+    <div class="row"><span>elapsed</span><span class="v" id="tVal">0.0 s</span></div>
+    <div class="row"><span>spread &Delta;&theta;&#8321;</span><span class="v" id="spreadVal">&mdash;</span></div>
+    <canvas id="spark" width="150" height="30"></canvas>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var canvas = document.getElementById("stage");
+  var ctx = canvas.getContext("2d");
+  var spark = document.getElementById("spark");
+  var sctx = spark.getContext("2d");
+  var DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+  var G = 9.81, L1 = 1, L2 = 1, M1 = 1, M2 = 1;
+  var SUBSTEPS = 12, DT = 1 / 60 / 12;
+
+  var epsSlider = document.getElementById("epsSlider");
+  var nSlider = document.getElementById("nSlider");
+  var epsVal = document.getElementById("epsVal");
+  var nVal = document.getElementById("nVal");
+  var pauseBtn = document.getElementById("pauseBtn");
+  var relaunchBtn = document.getElementById("relaunchBtn");
+  var trailBtn = document.getElementById("trailBtn");
+  var tVal = document.getElementById("tVal");
+  var spreadVal = document.getElementById("spreadVal");
+  var hint = document.getElementById("hint");
+
+  function loadNum(key, fallback) {
+    try {
+      var v = localStorage.getItem(key);
+      return v === null ? fallback : parseFloat(v);
+    } catch (e) { return fallback; }
+  }
+  function saveNum(key, v) {
+    try { localStorage.setItem(key, String(v)); } catch (e) {}
+  }
+
+  epsSlider.value = loadNum("bfx_eps", 40);
+  nSlider.value = loadNum("bfx_n", 16);
+
+  function epsFromSlider() {
+    var t = parseFloat(epsSlider.value) / 100;
+    return Math.pow(10, -6 + t * 5);
+  }
+  function fmtSci(x) {
+    if (x <= 0) return "0";
+    var exp = Math.floor(Math.log10(x));
+    var mant = x / Math.pow(10, exp);
+    return mant.toFixed(1) + "×10" + supIndex(exp);
+  }
+  function supIndex(n) {
+    var map = { "-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³",
+      "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
+    return String(n).split("").map(function (c) { return map[c] || c; }).join("");
+  }
+
+  var W = 0, H = 0, originX = 0, originY = 0, scale = 100;
+  function resize() {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    originX = W * 0.5;
+    originY = H * 0.34;
+    scale = Math.min(W, H) * 0.30;
+    ctx.fillStyle = "#0a0c12";
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // --- physics ---------------------------------------------------------
+  function deriv(s) {
+    var th1 = s[0], w1 = s[1], th2 = s[2], w2 = s[3];
+    var dTh = th1 - th2;
+    var den = 2 * M1 + M2 - M2 * Math.cos(2 * th1 - 2 * th2);
+
+    var a1 = (-G * (2 * M1 + M2) * Math.sin(th1)
+      - M2 * G * Math.sin(th1 - 2 * th2)
+      - 2 * Math.sin(dTh) * M2 * (w2 * w2 * L2 + w1 * w1 * L1 * Math.cos(dTh))
+    ) / (L1 * den);
+
+    var a2 = (2 * Math.sin(dTh) * (
+        w1 * w1 * L1 * (M1 + M2)
+        + G * (M1 + M2) * Math.cos(th1)
+        + w2 * w2 * L2 * M2 * Math.cos(dTh)
+      )
+    ) / (L2 * den);
+
+    return [w1, a1, w2, a2];
+  }
+
+  function rk4Step(s, dt) {
+    var k1 = deriv(s);
+    var s2 = [s[0] + dt / 2 * k1[0], s[1] + dt / 2 * k1[1], s[2] + dt / 2 * k1[2], s[3] + dt / 2 * k1[3]];
+    var k2 = deriv(s2);
+    var s3 = [s[0] + dt / 2 * k2[0], s[1] + dt / 2 * k2[1], s[2] + dt / 2 * k2[2], s[3] + dt / 2 * k2[3]];
+    var k3 = deriv(s3);
+    var s4 = [s[0] + dt * k3[0], s[1] + dt * k3[1], s[2] + dt * k3[2], s[3] + dt * k3[3]];
+    var k4 = deriv(s4);
+    return [
+      s[0] + dt / 6 * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]),
+      s[1] + dt / 6 * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]),
+      s[2] + dt / 6 * (k1[2] + 2 * k2[2] + 2 * k3[2] + k4[2]),
+      s[3] + dt / 6 * (k1[3] + 2 * k2[3] + 2 * k3[3] + k4[3])
+    ];
+  }
+
+  // --- swarm state -------------------------------------------------------
+  var swarm = [];
+  var colors = [];
+  var baseAngle = 2.85;
+  var simTime = 0;
+  var spreadHistory = [];
+  var paused = false;
+  var trailsOn = true;
+
+  function hueFor(i, n) {
+    var h = (i / Math.max(1, n)) * 300;
+    return "hsl(" + h.toFixed(0) + ", 85%, 62%)";
+  }
+
+  function spawn(angle) {
+    var n = parseInt(nSlider.value, 10);
+    var eps = epsFromSlider();
+    swarm = [];
+    colors = [];
+    for (var i = 0; i < n; i++) {
+      var spread = n > 1 ? (i / (n - 1) - 0.5) * 2 : 0; // -1..1
+      var th1 = angle + spread * eps;
+      swarm.push([th1, 0, angle, 0]);
+      colors.push(hueFor(i, n));
+    }
+    simTime = 0;
+    spreadHistory = [];
+    ctx.fillStyle = "#0a0c12";
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // --- interaction ---------------------------------------------------
+  var dragging = false;
+  var dragAngle = baseAngle;
+
+  function angleFromPointer(x, y) {
+    var dx = x - originX, dy = y - originY;
+    var a = Math.atan2(dx, dy);
+    return a;
+  }
+
+  function pointerPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var cx = (e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX) - r.left;
+    var cy = (e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY) - r.top;
+    return [cx, cy];
+  }
+
+  canvas.addEventListener("pointerdown", function (e) {
+    dragging = true;
+    paused = true;
+    canvas.classList.add("dragging");
+    hint.classList.remove("show");
+    var p = pointerPos(e);
+    dragAngle = angleFromPointer(p[0], p[1]);
+    canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener("pointermove", function (e) {
+    if (!dragging) return;
+    var p = pointerPos(e);
+    dragAngle = angleFromPointer(p[0], p[1]);
+    drawGhost(dragAngle);
+  });
+  window.addEventListener("pointerup", function () {
+    if (!dragging) return;
+    dragging = false;
+    canvas.classList.remove("dragging");
+    baseAngle = dragAngle;
+    paused = false;
+    spawn(baseAngle);
+  });
+
+  function drawGhost(angle) {
+    ctx.fillStyle = "#0a0c12";
+    ctx.fillRect(0, 0, W, H);
+    var x1 = originX + Math.sin(angle) * L1 * scale;
+    var y1 = originY + Math.cos(angle) * L1 * scale;
+    var x2 = x1 + Math.sin(angle) * L2 * scale;
+    var y2 = y1 + Math.cos(angle) * L2 * scale;
+    ctx.strokeStyle = "rgba(238,241,247,0.5)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(originX, originY);
+    ctx.lineTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.fillStyle = "#ffb340";
+    ctx.beginPath();
+    ctx.arc(x2, y2, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(238,241,247,0.85)";
+    ctx.beginPath();
+    ctx.arc(originX, originY, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // --- render loop -----------------------------------------------------
+  function step() {
+    if (!paused && !dragging) {
+      for (var sub = 0; sub < SUBSTEPS; sub++) {
+        for (var i = 0; i < swarm.length; i++) {
+          swarm[i] = rk4Step(swarm[i], DT);
+        }
+        simTime += DT;
+      }
+
+      var fadeAlpha = trailsOn ? 0.085 : 0.55;
+      ctx.fillStyle = "rgba(10,12,18," + fadeAlpha + ")";
+      ctx.fillRect(0, 0, W, H);
+
+      // trail dots (bob 2), additive glow
+      ctx.globalCompositeOperation = "lighter";
+      for (i = 0; i < swarm.length; i++) {
+        var s = swarm[i];
+        var x1 = originX + Math.sin(s[0]) * L1 * scale;
+        var y1 = originY + Math.cos(s[0]) * L1 * scale;
+        var x2 = x1 + Math.sin(s[2]) * L2 * scale;
+        var y2 = y1 + Math.cos(s[2]) * L2 * scale;
+        ctx.fillStyle = colors[i];
+        ctx.beginPath();
+        ctx.arc(x2, y2, 2.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalCompositeOperation = "source-over";
+
+      // rods + bobs, crisp
+      for (i = 0; i < swarm.length; i++) {
+        s = swarm[i];
+        x1 = originX + Math.sin(s[0]) * L1 * scale;
+        y1 = originY + Math.cos(s[0]) * L1 * scale;
+        x2 = x1 + Math.sin(s[2]) * L2 * scale;
+        y2 = y1 + Math.cos(s[2]) * L2 * scale;
+        ctx.strokeStyle = colors[i];
+        ctx.globalAlpha = 0.55;
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.moveTo(originX, originY);
+        ctx.lineTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = colors[i];
+        ctx.beginPath();
+        ctx.arc(x2, y2, 2.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = "rgba(238,241,247,0.85)";
+      ctx.beginPath();
+      ctx.arc(originX, originY, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // spread metric: range of theta1 across swarm
+      var minT = Infinity, maxT = -Infinity;
+      for (i = 0; i < swarm.length; i++) {
+        var v = swarm[i][0];
+        if (v < minT) minT = v;
+        if (v > maxT) maxT = v;
+      }
+      var spreadNow = Math.max(1e-9, maxT - minT);
+      spreadHistory.push(spreadNow);
+      if (spreadHistory.length > 260) spreadHistory.shift();
+
+      tVal.textContent = simTime.toFixed(1) + " s";
+      spreadVal.textContent = fmtSci(spreadNow) + " rad";
+      drawSpark();
+    }
+    requestAnimationFrame(step);
+  }
+
+  function drawSpark() {
+    var w = spark.width, h = spark.height;
+    sctx.clearRect(0, 0, w, h);
+    sctx.strokeStyle = "rgba(131,138,160,0.35)";
+    sctx.lineWidth = 1;
+    sctx.beginPath();
+    sctx.moveTo(0, h - 0.5);
+    sctx.lineTo(w, h - 0.5);
+    sctx.stroke();
+
+    if (spreadHistory.length < 2) return;
+    var logs = spreadHistory.map(function (v) { return Math.log10(Math.max(v, 1e-9)); });
+    var lo = Math.min.apply(null, logs);
+    var hi = Math.max.apply(null, logs);
+    if (hi - lo < 1e-6) hi = lo + 1;
+    sctx.strokeStyle = "#ffb340";
+    sctx.lineWidth = 1.4;
+    sctx.beginPath();
+    for (var i = 0; i < logs.length; i++) {
+      var x = (i / (spreadHistory.length - 1)) * w;
+      var y = h - ((logs[i] - lo) / (hi - lo)) * (h - 2) - 1;
+      if (i === 0) sctx.moveTo(x, y); else sctx.lineTo(x, y);
+    }
+    sctx.stroke();
+  }
+
+  // --- controls ----------------------------------------------------------
+  function refreshLabels() {
+    epsVal.textContent = fmtSci(epsFromSlider());
+    nVal.textContent = nSlider.value;
+  }
+  epsSlider.addEventListener("input", function () {
+    refreshLabels();
+    saveNum("bfx_eps", epsSlider.value);
+  });
+  nSlider.addEventListener("input", function () {
+    refreshLabels();
+    saveNum("bfx_n", nSlider.value);
+    spawn(baseAngle);
+  });
+  pauseBtn.addEventListener("click", function () {
+    paused = !paused;
+    pauseBtn.textContent = paused ? "Resume" : "Pause";
+  });
+  relaunchBtn.addEventListener("click", function () {
+    paused = false;
+    pauseBtn.textContent = "Pause";
+    spawn(baseAngle);
+  });
+  trailBtn.addEventListener("click", function () {
+    trailsOn = !trailsOn;
+    trailBtn.textContent = trailsOn ? "Trails: On" : "Trails: Off";
+  });
+
+  window.addEventListener("resize", function () {
+    resize();
+  });
+
+  refreshLabels();
+  resize();
+  spawn(baseAngle);
+  requestAnimationFrame(step);
+  setTimeout(function () { hint.classList.add("show"); }, 100);
+  setTimeout(function () { hint.classList.remove("show"); }, 6000);
+})();
+</script>
