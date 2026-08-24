@@ -1,8 +1,14 @@
 # Chaos
 
-### 🦋 [Play with the Butterfly Effect →](https://jinchen7-cmd.github.io/Chaos/butterfly-effect.html)
+Two things to play with, then the research they're standing in for.
 
-Sixteen physics-accurate double pendulums, released a hair's width apart. Drag to set an angle, let go, and watch identical starting conditions fan out into total disagreement in a couple of seconds — with a live readout of *how fast* they disagree, which is the actual mathematical signature of chaos (a Lyapunov exponent), not just a vibe.
+## 🦋 [The Butterfly Effect →](https://jinchen7-cmd.github.io/Chaos/butterfly-effect.html)
+
+Sixteen physics-accurate double pendulums, released a hair's width apart. Drag to set an angle, let go, and watch identical starting conditions fan out into total disagreement in a couple of seconds — with sound, quick-start presets, a live Lyapunov-divergence readout, and a stopwatch that times how long the swarm holds together before "chaos" officially wins.
+
+## 🌳 [Where Order Breaks →](https://jinchen7-cmd.github.io/Chaos/bifurcation.html)
+
+The logistic map's bifurcation diagram — the other icon of chaos theory, and arguably the stranger one: one line of algebra, `x ← r·x·(1−x)`, that goes from boring to periodic to fully chaotic as you turn one knob. Drag a box to zoom in anywhere; the fig-tree pattern repeats at every scale, forever. Click a point to watch that growth rate play out live as a cobweb plot.
 
 That unpredictability is the whole problem this repo is about — and the rest of it is about clawing some of it back with machine learning.
 

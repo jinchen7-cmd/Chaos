@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>The Butterfly Effect</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -80,6 +81,45 @@
   }
 
   .sub b { color: var(--ink); font-weight: 500; }
+
+  .presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 1em 0 0;
+    pointer-events: auto;
+  }
+  .presets .lbl {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    align-self: center;
+    margin-right: 2px;
+  }
+  .pill {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.02em;
+    color: var(--ink-dim);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+  .pill:hover, .pill:focus-visible {
+    border-color: var(--accent-dim);
+    color: var(--accent);
+    outline: none;
+  }
+  .pill.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(255,179,64,0.08);
+  }
 
   .credit {
     position: fixed;
@@ -226,6 +266,53 @@
   }
   .hint.show { opacity: 1; }
 
+  .raceBanner {
+    position: fixed;
+    left: 50%;
+    bottom: calc(clamp(14px, 3vw, 28px) + 156px);
+    transform: translate(-50%, 8px);
+    background: var(--bg-raised);
+    border: 1px solid var(--accent-dim);
+    border-radius: 10px;
+    padding: 14px 18px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    text-align: center;
+    max-width: min(90vw, 380px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+  .raceBanner.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+  @media (max-width: 640px) {
+    .raceBanner { bottom: calc(clamp(14px, 3vw, 28px) + 210px); }
+  }
+  .raceBanner .big {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-style: italic;
+    font-size: 1.7rem;
+    color: var(--accent);
+    line-height: 1.1;
+  }
+  .raceBanner .cap {
+    margin-top: 4px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    color: var(--ink-dim);
+    letter-spacing: 0.01em;
+  }
+  .raceBanner input {
+    margin-top: 10px;
+    width: 100%;
+    background: var(--bg-raised-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--ink-dim);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.66rem;
+    padding: 6px 8px;
+  }
+  .raceBanner input:focus { color: var(--ink); outline: 1px solid var(--accent-dim); }
+
   @media (max-width: 640px) {
     .dock { flex-wrap: wrap; border-radius: 12px; }
     .panel, .readout { min-width: 0; flex: 1 1 42%; }
@@ -238,11 +325,18 @@
 <header>
   <h1>The Butterfly&nbsp;Effect</h1>
   <p class="sub">Sixteen pendulums, released a hair's width apart. <b>Drag the canvas</b> to set an angle and let go &mdash; watch how little it takes for identical starts to stop agreeing.</p>
+  <div class="presets">
+    <span class="lbl">Try:</span>
+    <button class="pill" data-angle="0.9">Gentle</button>
+    <button class="pill" data-angle="2.3">Wild</button>
+    <button class="pill" data-angle="3.05">Near-inverted</button>
+  </div>
 </header>
 
 <div class="credit">
   a real, physics-accurate double pendulum<br>
-  from a research project on <a href="https://github.com/jinchen7-cmd/Chaos" target="_blank" rel="noopener">predicting chaos with ML &rarr;</a>
+  from a research project on <a href="https://github.com/jinchen7-cmd/Chaos" target="_blank" rel="noopener">predicting chaos with ML &rarr;</a><br>
+  also try: <a href="./bifurcation.html">the other icon of chaos &rarr;</a>
 </div>
 
 <div class="hint" id="hint">click and drag anywhere</div>
@@ -261,13 +355,21 @@
     </div>
     <div class="btnrow" style="margin-top:2px;">
       <button id="trailBtn">Trails: On</button>
+      <button id="soundBtn">Sound: Off</button>
     </div>
   </div>
   <div class="readout">
     <div class="row"><span>elapsed</span><span class="v" id="tVal">0.0 s</span></div>
     <div class="row"><span>spread &Delta;&theta;&#8321;</span><span class="v" id="spreadVal">&mdash;</span></div>
+    <div class="row"><span>time to chaos</span><span class="v" id="raceVal">running&hellip;</span></div>
     <canvas id="spark" width="150" height="30"></canvas>
   </div>
+</div>
+
+<div class="raceBanner" id="raceBanner">
+  <div class="big" id="raceBig">Scrambled in 0.0s</div>
+  <div class="cap">that's how long 16 near-identical starts stayed in agreement</div>
+  <input id="raceShare" type="text" readonly onclick="this.select()" aria-label="Shareable result text">
 </div>
 
 <script>
@@ -290,9 +392,15 @@
   var pauseBtn = document.getElementById("pauseBtn");
   var relaunchBtn = document.getElementById("relaunchBtn");
   var trailBtn = document.getElementById("trailBtn");
+  var soundBtn = document.getElementById("soundBtn");
   var tVal = document.getElementById("tVal");
   var spreadVal = document.getElementById("spreadVal");
+  var raceVal = document.getElementById("raceVal");
+  var raceBanner = document.getElementById("raceBanner");
+  var raceBig = document.getElementById("raceBig");
+  var raceShare = document.getElementById("raceShare");
   var hint = document.getElementById("hint");
+  var presetBtns = document.querySelectorAll(".pill[data-angle]");
 
   function loadNum(key, fallback) {
     try {
@@ -322,6 +430,53 @@
       "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
     return String(n).split("").map(function (c) { return map[c] || c; }).join("");
   }
+
+  // --- sound: a pluck per pendulum each time it crosses bottom-dead-center,
+  // pitched to a pentatonic scale so any combination stays consonant -------
+  var audioCtx = null, masterGain = null;
+  var soundOn = loadNum("bfx_sound", 0) > 0;
+  var PENTATONIC = [0, 2, 4, 7, 9]; // semitone offsets, major pentatonic
+  function noteFreq(i, n) {
+    var slot = Math.round((i / Math.max(1, n)) * (PENTATONIC.length * 3));
+    var octave = Math.floor(slot / PENTATONIC.length);
+    var semitone = PENTATONIC[slot % PENTATONIC.length] + 12 * octave;
+    return 220 * Math.pow(2, semitone / 12); // base A3
+  }
+  function ensureAudio() {
+    if (audioCtx) {
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      return;
+    }
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AC();
+      var comp = audioCtx.createDynamicsCompressor();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.5;
+      masterGain.connect(comp);
+      comp.connect(audioCtx.destination);
+    } catch (e) { audioCtx = null; }
+  }
+  function pluck(freq) {
+    if (!soundOn || !audioCtx || audioCtx.state !== "running") return;
+    var t0 = audioCtx.currentTime;
+    var osc = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    osc.type = "triangle";
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(0.22, t0 + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.5);
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start(t0);
+    osc.stop(t0 + 0.52);
+    osc.onended = function () { osc.disconnect(); g.disconnect(); };
+  }
+
+  // --- "race" to disagreement -------------------------------------------
+  var RACE_THRESHOLD = 0.5; // rad; swarm counted as "scrambled" past this spread
+  var raceDone = false;
 
   var W = 0, H = 0, originX = 0, originY = 0, scale = 100;
   function resize() {
@@ -390,19 +545,28 @@
     return "hsl(" + h.toFixed(0) + ", 85%, 62%)";
   }
 
+  var prevSign = [];
+  var noteFreqs = [];
   function spawn(angle) {
     var n = parseInt(nSlider.value, 10);
     var eps = epsFromSlider();
     swarm = [];
     colors = [];
+    prevSign = [];
+    noteFreqs = [];
     for (var i = 0; i < n; i++) {
       var spread = n > 1 ? (i / (n - 1) - 0.5) * 2 : 0; // -1..1
       var th1 = angle + spread * eps;
       swarm.push([th1, 0, angle, 0]);
       colors.push(hueFor(i, n));
+      prevSign.push(Math.sin(angle) >= 0 ? 1 : -1);
+      noteFreqs.push(noteFreq(i, n));
     }
     simTime = 0;
     spreadHistory = [];
+    raceDone = false;
+    raceBanner.classList.remove("show");
+    raceVal.textContent = "running…";
     ctx.fillStyle = "#0a0c12";
     ctx.fillRect(0, 0, W, H);
   }
@@ -425,6 +589,7 @@
   }
 
   canvas.addEventListener("pointerdown", function (e) {
+    ensureAudio();
     dragging = true;
     paused = true;
     canvas.classList.add("dragging");
@@ -498,6 +663,10 @@
         ctx.beginPath();
         ctx.arc(x2, y2, 2.1, 0, Math.PI * 2);
         ctx.fill();
+
+        var sign = (x2 - originX) >= 0 ? 1 : -1;
+        if (sign !== prevSign[i]) pluck(noteFreqs[i]);
+        prevSign[i] = sign;
       }
       ctx.globalCompositeOperation = "source-over";
 
@@ -540,6 +709,15 @@
 
       tVal.textContent = simTime.toFixed(1) + " s";
       spreadVal.textContent = fmtSci(spreadNow) + " rad";
+      if (!raceDone) {
+        if (spreadNow >= RACE_THRESHOLD) {
+          raceDone = true;
+          raceVal.textContent = simTime.toFixed(2) + " s";
+          showRaceResult(simTime);
+        } else {
+          raceVal.textContent = simTime.toFixed(1) + " s…";
+        }
+      }
       drawSpark();
     }
     requestAnimationFrame(step);
@@ -571,6 +749,14 @@
     sctx.stroke();
   }
 
+  function showRaceResult(t) {
+    raceBig.textContent = "Scrambled in " + t.toFixed(2) + "s";
+    var url = "https://jinchen7-cmd.github.io/Chaos/butterfly-effect.html";
+    raceShare.value =
+      "My pendulums held together for " + t.toFixed(2) + "s before chaos took over 🦋 " + url;
+    raceBanner.classList.add("show");
+  }
+
   // --- controls ----------------------------------------------------------
   function refreshLabels() {
     epsVal.textContent = fmtSci(epsFromSlider());
@@ -590,6 +776,7 @@
     pauseBtn.textContent = paused ? "Resume" : "Pause";
   });
   relaunchBtn.addEventListener("click", function () {
+    ensureAudio();
     paused = false;
     pauseBtn.textContent = "Pause";
     spawn(baseAngle);
@@ -597,6 +784,23 @@
   trailBtn.addEventListener("click", function () {
     trailsOn = !trailsOn;
     trailBtn.textContent = trailsOn ? "Trails: On" : "Trails: Off";
+  });
+  soundBtn.textContent = soundOn ? "Sound: On" : "Sound: Off";
+  soundBtn.addEventListener("click", function () {
+    ensureAudio();
+    soundOn = !soundOn;
+    soundBtn.textContent = soundOn ? "Sound: On" : "Sound: Off";
+    saveNum("bfx_sound", soundOn ? 1 : 0);
+  });
+
+  presetBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      ensureAudio();
+      paused = false;
+      pauseBtn.textContent = "Pause";
+      baseAngle = parseFloat(btn.getAttribute("data-angle"));
+      spawn(baseAngle);
+    });
   });
 
   window.addEventListener("resize", function () {

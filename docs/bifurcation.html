@@ -1,0 +1,504 @@
+<meta charset="utf-8">
+<title>Where Order Breaks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c12;
+    --bg-raised: #12141e;
+    --bg-raised-2: #191c29;
+    --ink: #eef1f7;
+    --ink-dim: #838aa0;
+    --line: #262b3c;
+    --accent: #ffb340;
+    --accent-dim: #6b4d1e;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+  }
+
+  #stage {
+    position: fixed;
+    inset: 0;
+    display: block;
+    touch-action: none;
+    cursor: crosshair;
+    background: var(--bg);
+  }
+
+  .scrim {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: min(30vh, 280px);
+    background: linear-gradient(180deg, rgba(10,12,18,0.86) 0%, rgba(10,12,18,0.5) 55%, rgba(10,12,18,0) 100%);
+    pointer-events: none;
+  }
+
+  header {
+    position: fixed;
+    top: 0; left: 0;
+    max-width: min(640px, 66vw);
+    padding: clamp(20px, 4vw, 44px) 0 0 clamp(20px, 4vw, 44px);
+    pointer-events: none;
+  }
+  @media (max-width: 560px) {
+    header { max-width: calc(100vw - 40px); }
+    .credit { display: none; }
+  }
+
+  h1 {
+    margin: 0;
+    font-family: "Instrument Serif", Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: clamp(2.1rem, 6vw, 4.2rem);
+    line-height: 1.02;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+
+  .sub {
+    margin: 0.6em 0 0;
+    max-width: 34em;
+    font-size: clamp(0.92rem, 1.6vw, 1.08rem);
+    line-height: 1.5;
+    color: var(--ink-dim);
+    text-wrap: balance;
+  }
+  .sub b { color: var(--ink); font-weight: 500; }
+  .sub code {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.92em;
+    color: var(--accent);
+  }
+
+  .credit {
+    position: fixed;
+    top: clamp(20px, 4vw, 44px);
+    right: clamp(20px, 4vw, 44px);
+    text-align: right;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+    color: var(--ink-dim);
+    line-height: 1.6;
+  }
+  .credit a {
+    color: var(--ink-dim);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line);
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .credit a:hover { color: var(--accent); border-color: var(--accent-dim); }
+
+  .dock {
+    position: fixed;
+    left: 50%;
+    bottom: clamp(14px, 3vw, 28px);
+    transform: translateX(-50%);
+    display: flex;
+    align-items: stretch;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+    max-width: calc(100vw - 24px);
+  }
+  .panel {
+    background: var(--bg-raised);
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+  }
+  .panel .label {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .panel .label .val { color: var(--accent); font-variant-numeric: tabular-nums; }
+
+  .btnrow { display: flex; gap: 8px; align-items: center; justify-content: center; }
+  button {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink);
+    background: var(--bg-raised-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 7px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  button:hover { border-color: var(--accent-dim); color: var(--accent); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .hint {
+    position: fixed;
+    left: 50%;
+    bottom: calc(clamp(14px, 3vw, 28px) + 62px);
+    transform: translateX(-50%);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    color: var(--ink-dim);
+    letter-spacing: 0.02em;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease 2.2s;
+    text-align: center;
+  }
+  .hint.show { opacity: 1; }
+
+  .cobweb {
+    position: fixed;
+    top: calc(clamp(20px, 4vw, 44px) + 62px);
+    right: clamp(20px, 4vw, 44px);
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .cobweb.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .cobweb .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 8px;
+  }
+  .cobweb .rlabel {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .cobweb .close {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    color: var(--ink-dim);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+  .cobweb .close:hover { color: var(--accent); }
+  .cobweb canvas { display: block; border-radius: 4px; }
+  .cobweb .foot {
+    margin-top: 6px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.62rem;
+    color: var(--ink-dim);
+    letter-spacing: 0.02em;
+  }
+
+  @media (max-width: 640px) {
+    .dock { flex-wrap: wrap; }
+    .cobweb { left: 12px; right: 12px; top: auto; bottom: calc(clamp(14px, 3vw, 28px) + 120px); }
+    .cobweb canvas { width: 100%; height: auto; }
+  }
+</style>
+
+<canvas id="stage"></canvas>
+<div class="scrim"></div>
+
+<header>
+  <h1>Where Order&nbsp;Breaks</h1>
+  <p class="sub">One equation, <code>x &larr; r&middot;x&middot;(1&minus;x)</code>, run millions of times. Every vertical slice is a different growth rate <code>r</code>; every dot is a value the population revisits forever. <b>Drag a box to zoom</b> &mdash; the fig-tree pattern repeats at every scale. <b>Click once</b> to watch that <code>r</code> unfold, step by step.</p>
+</header>
+
+<div class="credit">
+  the logistic map, the other icon of chaos<br>
+  from a research project on <a href="https://github.com/jinchen7-cmd/Chaos" target="_blank" rel="noopener">predicting chaos with ML &rarr;</a><br>
+  also try: <a href="./butterfly-effect.html">the double pendulum &rarr;</a>
+</div>
+
+<div class="hint" id="hint">drag to zoom &middot; click to watch</div>
+
+<div class="dock">
+  <div class="panel">
+    <div class="label"><span>r range</span><span class="val" id="rRange">2.400 &ndash; 4.000</span></div>
+    <div class="label"><span>x range</span><span class="val" id="xRange">0.000 &ndash; 1.000</span></div>
+  </div>
+  <div class="panel">
+    <div class="btnrow">
+      <button id="resetBtn">Reset zoom</button>
+    </div>
+  </div>
+</div>
+
+<div class="cobweb" id="cobweb">
+  <div class="head">
+    <span class="rlabel" id="cwR">r = 3.5000</span>
+    <button class="close" id="cwClose">&times; close</button>
+  </div>
+  <canvas id="cwCanvas" width="220" height="220"></canvas>
+  <div class="foot" id="cwFoot">x&#8320;=0.500</div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var canvas = document.getElementById("stage");
+  var ctx = canvas.getContext("2d");
+  var buffer = document.createElement("canvas");
+  var bctx = buffer.getContext("2d");
+  var DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  var hint = document.getElementById("hint");
+  var resetBtn = document.getElementById("resetBtn");
+  var rRangeEl = document.getElementById("rRange");
+  var xRangeEl = document.getElementById("xRange");
+
+  var cobweb = document.getElementById("cobweb");
+  var cwCanvas = document.getElementById("cwCanvas");
+  var cwCtx = cwCanvas.getContext("2d");
+  var cwR = document.getElementById("cwR");
+  var cwFoot = document.getElementById("cwFoot");
+  var cwClose = document.getElementById("cwClose");
+
+  var FULL = { rMin: 2.4, rMax: 4.0, xMin: 0.0, xMax: 1.0 };
+  var view = { rMin: FULL.rMin, rMax: FULL.rMax, xMin: FULL.xMin, xMax: FULL.xMax };
+
+  var W = 0, H = 0;
+  function resize() {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    buffer.width = W * DPR;
+    buffer.height = H * DPR;
+    bctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    renderDiagram();
+  }
+
+  function fmt(x) { return x.toFixed(x < 0.001 ? 6 : 3); }
+
+  // Expensive: resamples the whole map. Only call when `view` changes.
+  function renderDiagram() {
+    bctx.fillStyle = "#0a0c12";
+    bctx.fillRect(0, 0, W, H);
+
+    var burn = 420, plot = 320;
+    var dr = view.rMax - view.rMin;
+    var dx = view.xMax - view.xMin;
+
+    bctx.fillStyle = "rgba(238,241,247,0.10)";
+    for (var px = 0; px < W; px++) {
+      var r = view.rMin + (px / W) * dr;
+      var x = 0.5;
+      for (var b = 0; b < burn; b++) x = r * x * (1 - x);
+      for (var p = 0; p < plot; p++) {
+        x = r * x * (1 - x);
+        if (x < view.xMin || x > view.xMax) continue;
+        var py = H - ((x - view.xMin) / dx) * H;
+        bctx.fillRect(px, py, 1.1, 1.1);
+      }
+    }
+
+    rRangeEl.textContent = fmt(view.rMin) + " – " + fmt(view.rMax);
+    xRangeEl.textContent = fmt(view.xMin) + " – " + fmt(view.xMax);
+    redrawStage();
+  }
+
+  // Cheap: blits the cached diagram bitmap. Safe to call every pointermove.
+  function redrawStage() {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(buffer, 0, 0);
+    ctx.restore();
+  }
+
+  // --- drag-to-zoom / click-to-inspect -----------------------------------
+  var dragStart = null, dragNow = null, isDown = false;
+
+  function pointerPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var cx = (e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX) - r.left;
+    var cy = (e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY) - r.top;
+    return [cx, cy];
+  }
+
+  canvas.addEventListener("pointerdown", function (e) {
+    isDown = true;
+    hint.classList.remove("show");
+    var p = pointerPos(e);
+    dragStart = p;
+    dragNow = p;
+    canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
+  });
+
+  canvas.addEventListener("pointermove", function (e) {
+    if (!isDown) return;
+    dragNow = pointerPos(e);
+    redrawStage();
+    var x0 = Math.min(dragStart[0], dragNow[0]), x1 = Math.max(dragStart[0], dragNow[0]);
+    var y0 = Math.min(dragStart[1], dragNow[1]), y1 = Math.max(dragStart[1], dragNow[1]);
+    ctx.strokeStyle = "rgba(255,179,64,0.85)";
+    ctx.setLineDash([4, 3]);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+    ctx.setLineDash([]);
+  });
+
+  window.addEventListener("pointerup", function () {
+    if (!isDown) return;
+    isDown = false;
+    var dx = Math.abs(dragNow[0] - dragStart[0]);
+    var dy = Math.abs(dragNow[1] - dragStart[1]);
+
+    if (dx < 6 && dy < 6) {
+      inspectAt(dragStart[0]);
+      redrawStage();
+      dragStart = null;
+      return;
+    }
+
+    var x0 = Math.min(dragStart[0], dragNow[0]), x1 = Math.max(dragStart[0], dragNow[0]);
+    var y0 = Math.min(dragStart[1], dragNow[1]), y1 = Math.max(dragStart[1], dragNow[1]);
+    if (dx < 12 || dy < 12) { redrawStage(); dragStart = null; return; }
+
+    var dr = view.rMax - view.rMin, dxr = view.xMax - view.xMin;
+    var newRMin = view.rMin + (x0 / W) * dr;
+    var newRMax = view.rMin + (x1 / W) * dr;
+    var newXMax = view.xMin + ((H - y0) / H) * dxr;
+    var newXMin = view.xMin + ((H - y1) / H) * dxr;
+    view = { rMin: newRMin, rMax: newRMax, xMin: newXMin, xMax: newXMax };
+    dragStart = null;
+    renderDiagram();
+  });
+
+  resetBtn.addEventListener("click", function () {
+    view = { rMin: FULL.rMin, rMax: FULL.rMax, xMin: FULL.xMin, xMax: FULL.xMax };
+    renderDiagram();
+  });
+
+  // --- cobweb inspector ----------------------------------------------------
+  var cwAnim = null;
+  function inspectAt(px) {
+    var r = view.rMin + (px / W) * (view.rMax - view.rMin);
+    cwR.textContent = "r = " + r.toFixed(4);
+    cobweb.classList.add("show");
+    startCobweb(r);
+  }
+
+  cwClose.addEventListener("click", function () {
+    cobweb.classList.remove("show");
+    if (cwAnim) cancelAnimationFrame(cwAnim);
+  });
+
+  function startCobweb(r) {
+    if (cwAnim) cancelAnimationFrame(cwAnim);
+    var size = cwCanvas.width;
+    var pad = 18;
+    var plotSize = size - pad * 2;
+
+    function toPx(x) { return pad + x * plotSize; }
+    function toPy(y) { return size - pad - y * plotSize; }
+
+    var x = 0.5;
+    var pts = [[x, 0]];
+    var step = 0;
+    var lastT = 0;
+    var MAX_STEPS = 60;
+
+    function drawStatic() {
+      cwCtx.clearRect(0, 0, size, size);
+      cwCtx.fillStyle = "#0a0c12";
+      cwCtx.fillRect(0, 0, size, size);
+
+      // parabola y = r x (1-x)
+      cwCtx.strokeStyle = "rgba(238,241,247,0.55)";
+      cwCtx.lineWidth = 1.3;
+      cwCtx.beginPath();
+      for (var i = 0; i <= 100; i++) {
+        var xx = i / 100;
+        var yy = r * xx * (1 - xx);
+        var px = toPx(xx), py = toPy(Math.min(1, yy));
+        if (i === 0) cwCtx.moveTo(px, py); else cwCtx.lineTo(px, py);
+      }
+      cwCtx.stroke();
+
+      // diagonal y = x
+      cwCtx.strokeStyle = "rgba(131,138,160,0.5)";
+      cwCtx.lineWidth = 1;
+      cwCtx.beginPath();
+      cwCtx.moveTo(toPx(0), toPy(0));
+      cwCtx.lineTo(toPx(1), toPy(1));
+      cwCtx.stroke();
+    }
+
+    function drawCobweb() {
+      drawStatic();
+      cwCtx.strokeStyle = "#ffb340";
+      cwCtx.lineWidth = 1.1;
+      cwCtx.globalAlpha = 0.85;
+      cwCtx.beginPath();
+      for (var i = 0; i < pts.length; i++) {
+        var p = pts[i];
+        var px = toPx(Math.max(0, Math.min(1, p[0])));
+        var py = toPy(Math.max(0, Math.min(1, p[1])));
+        if (i === 0) cwCtx.moveTo(px, py); else cwCtx.lineTo(px, py);
+      }
+      cwCtx.stroke();
+      cwCtx.globalAlpha = 1;
+      cwFoot.textContent = "x₀=0.500  ·  step " + step + "/" + MAX_STEPS;
+    }
+
+    function tick(t) {
+      if (t - lastT > 110) {
+        lastT = t;
+        if (step < MAX_STEPS) {
+          var xNext = r * x * (1 - x);
+          pts.push([x, xNext]);
+          pts.push([xNext, xNext]);
+          x = xNext;
+          step++;
+        } else {
+          x = 0.5;
+          pts = [[x, 0]];
+          step = 0;
+        }
+        drawCobweb();
+      }
+      cwAnim = requestAnimationFrame(tick);
+    }
+    drawCobweb();
+    cwAnim = requestAnimationFrame(tick);
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+  setTimeout(function () { hint.classList.add("show"); }, 300);
+  setTimeout(function () { hint.classList.remove("show"); }, 7000);
+})();
+</script>
