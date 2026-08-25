@@ -1,6 +1,6 @@
 # Chaos
 
-Four things to play with, then the research they're standing in for.
+Three things to play with, then the research they're standing in for.
 
 ## 🦋 [The Butterfly Effect →](https://jinchen7-cmd.github.io/Chaos/butterfly-effect.html)
 
@@ -10,15 +10,11 @@ Sixteen physics-accurate double pendulums, released a hair's width apart. Drag t
 
 The logistic map's bifurcation diagram — the other icon of chaos theory, and arguably the stranger one: one line of algebra, `x ← r·x·(1−x)`, that goes from boring to periodic to fully chaotic as you turn one knob. Drag a box to zoom in anywhere; the fig-tree pattern repeats at every scale, forever. Click a point to watch that growth rate play out live as a cobweb plot.
 
-## ✨ [Falling Into Step →](https://jinchen7-cmd.github.io/Chaos/fireflies.html)
-
-The other direction chaos can go: a hundred fireflies, each blinking to its own private rhythm, no leader and no metronome — and yet, given a little coupling, they lock into a single shared pulse. This is the Kuramoto model, the same math behind synchronized heart cells, clapping audiences, and power-grid stability. Turn the coupling to zero and it never happens.
-
 ## 🔺 [The Chaos Game →](https://jinchen7-cmd.github.io/Chaos/chaos-game.html)
 
-The other direction, taken further: pick a corner of a triangle at random, move halfway to it, plot the point, repeat forever — with no plan and no memory. A perfect fractal falls out of pure randomness. Click anywhere, even outside the shape, to restart: it always finds its way back to the same pattern.
+The flip side: pick a corner of a triangle at random, move halfway to it, plot the point, repeat forever — with no plan and no memory. A perfect fractal falls out of pure randomness. Click anywhere, even outside the shape, to restart: it always finds its way back to the same pattern.
 
-That unpredictability — and the order hiding on both sides of it — is the whole problem this repo is about, and the rest of it is about clawing some of it back with machine learning.
+That unpredictability — and the order hiding underneath it — is the whole problem this repo is about, and the rest of it is about clawing some of it back with machine learning.
 
 ---
 
