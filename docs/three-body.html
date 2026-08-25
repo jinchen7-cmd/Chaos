@@ -96,6 +96,12 @@
 
   var canvas = document.getElementById("stage");
   var ctx = canvas.getContext("2d");
+  // Trails persist for the whole session: rather than storing every point
+  // and redrawing the entire history every frame (which both caps the
+  // length for performance and is why it used to fade out), each new
+  // segment is stroked once onto this offscreen layer and never erased.
+  var trailCanvas = document.createElement("canvas");
+  var trailCtx = trailCanvas.getContext("2d");
   var DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
   var hint = document.getElementById("hint");
   var pauseBtn = document.getElementById("pauseBtn");
@@ -124,7 +130,7 @@
   // state: flat array of 3 bodies x [x,y,vx,vy]
   var mass = [1, 1, 1];
   var s = null;
-  var trails = [[], [], []];
+  var lastPos = [null, null, null]; // [x,y] in CSS-pixel screen space
   var paused = false;
   var simTime = 0;
   var E0 = null;
@@ -149,6 +155,16 @@
     }
   };
 
+  function resetTrailLayer() {
+    // Resizing a canvas element always clears it, so this also runs on
+    // window resize (an infrequent, deliberate action) and on preset load
+    // (a discontinuous jump, where an old trail would be misleading anyway).
+    trailCanvas.width = canvas.width;
+    trailCanvas.height = canvas.height;
+    trailCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    lastPos = [null, null, null];
+  }
+
   function syncMassSliders() {
     for (var i = 0; i < 3; i++) {
       massSliders[i].value = mass[i];
@@ -160,13 +176,13 @@
     var p = PRESETS[name];
     mass = p.mass.slice();
     s = p.state.slice();
-    trails = [[], [], []];
     simTime = 0;
     E0 = null;
     presetBtns.forEach(function (b) {
       b.classList.toggle("active", b.getAttribute("data-preset") === name);
     });
     syncMassSliders();
+    if (W) resetTrailLayer();
   }
 
   function deriv(state) {
@@ -248,6 +264,7 @@
     scale = Math.min(W, H) * 0.16;
     ctx.fillStyle = "#05060a";
     ctx.fillRect(0, 0, W, H);
+    resetTrailLayer();
   }
 
   canvas.addEventListener("pointerdown", function () {
@@ -288,30 +305,38 @@
         s = rk4(s, DT);
         simTime += DT;
       }
-      for (var i = 0; i < 3; i++) {
-        trails[i].push([s[i * 4], s[i * 4 + 1]]);
-        if (trails[i].length > 500) trails[i].shift();
-      }
       if (E0 === null) E0 = energy();
 
-      ctx.fillStyle = "rgba(5,6,10,0.16)";
-      ctx.fillRect(0, 0, W, H);
-      for (i = 0; i < 3; i++) {
-        var tr = trails[i];
-        ctx.strokeStyle = COLORS[i];
-        ctx.lineWidth = 1.1;
-        ctx.globalAlpha = 0.7;
-        ctx.beginPath();
-        for (var p = 0; p < tr.length; p++) {
-          var px = cx + tr[p][0] * scale, py = cy + tr[p][1] * scale;
-          if (p === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      // Extend the persistent trail by one segment per body (O(1) per
+      // frame, regardless of how long the session has run).
+      for (var i = 0; i < 3; i++) {
+        var px = cx + s[i * 4] * scale, py = cy + s[i * 4 + 1] * scale;
+        if (lastPos[i]) {
+          trailCtx.strokeStyle = COLORS[i];
+          trailCtx.globalAlpha = 0.75;
+          trailCtx.lineWidth = 1.1;
+          trailCtx.beginPath();
+          trailCtx.moveTo(lastPos[i][0], lastPos[i][1]);
+          trailCtx.lineTo(px, py);
+          trailCtx.stroke();
         }
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-        var last = tr[tr.length - 1];
+        lastPos[i] = [px, py];
+      }
+
+      // Composite: solid background, the accumulated trail layer (1:1 raw
+      // pixel blit -- both canvases share the same device-pixel size), then
+      // the current body markers on top, drawn fresh each frame.
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = "#05060a";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(trailCanvas, 0, 0);
+      ctx.restore();
+
+      for (i = 0; i < 3; i++) {
         ctx.fillStyle = COLORS[i];
         ctx.beginPath();
-        ctx.arc(cx + last[0] * scale, cy + last[1] * scale, 3.5 + mass[i], 0, Math.PI * 2);
+        ctx.arc(lastPos[i][0], lastPos[i][1], 3.5 + mass[i], 0, Math.PI * 2);
         ctx.fill();
       }
 
