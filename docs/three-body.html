@@ -52,7 +52,7 @@
 
 <header>
   <h1>The Three-Body&nbsp;Problem</h1>
-  <p class="sub">Two bodies orbiting under gravity trace a clean, predictable ellipse forever. Add a third and, in general, there's no equation for where they end up &mdash; this is the problem that led Poincar&eacute; to discover chaos in the first place, in 1887. <b>Click anywhere</b> to nudge every body's velocity a little, <b>drag the mass sliders</b> to reshape the gravity live, and adjust <b>speed</b> to slow it down around a close pass.</p>
+  <p class="sub">Two bodies orbiting under gravity trace a clean, predictable ellipse forever. Add a third and, in general, there's no equation for where they end up &mdash; this is the problem that led Poincar&eacute; to discover chaos in the first place, in 1887. <b>Drag a body</b> to set its own starting position, <b>click empty space</b> to nudge every velocity a little, and use the mass and speed sliders to reshape the gravity live.</p>
   <div class="presets">
     <span class="lbl">Try:</span>
     <button class="pill" data-preset="eight">Figure-eight &middot; stable</button>
@@ -65,7 +65,7 @@
   part of <a href="https://github.com/jinchen7-cmd/Chaos" target="_blank" rel="noopener">a gallery of chaos toys &rarr;</a>
 </div>
 
-<div class="hint" id="hint">click to nudge their velocities</div>
+<div class="hint" id="hint">drag a body to place it &middot; click empty space to nudge</div>
 
 <div class="dock">
   <div class="panel">
@@ -269,10 +269,84 @@
     resetTrailLayer();
   }
 
-  canvas.addEventListener("pointerdown", function () {
+  // --- drag a body to set its starting position -------------------------
+  var draggingBody = -1;
+
+  function pointerPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var px = (e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX) - r.left;
+    var py = (e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY) - r.top;
+    return [px, py];
+  }
+
+  function bodyScreenPos(i) {
+    return [cx + s[i * 4] * scale, cy + s[i * 4 + 1] * scale];
+  }
+
+  function screenToSim(px, py) {
+    return [(px - cx) / scale, (py - cy) / scale];
+  }
+
+  function hitTestBody(px, py) {
+    for (var i = 0; i < 3; i++) {
+      var p = bodyScreenPos(i);
+      var r = 3.5 + mass[i] + 10; // generous grab radius, esp. for touch
+      var dx = px - p[0], dy = py - p[1];
+      if (dx * dx + dy * dy <= r * r) return i;
+    }
+    return -1;
+  }
+
+  // Draws the current state (trail layer + body markers) without advancing
+  // physics -- used both by step() each frame and, standalone, while dragging.
+  function renderStatic() {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#05060a";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(trailCanvas, 0, 0);
+    ctx.restore();
+    for (var i = 0; i < 3; i++) {
+      var p = bodyScreenPos(i);
+      ctx.fillStyle = COLORS[i];
+      ctx.beginPath();
+      ctx.arc(p[0], p[1], 3.5 + mass[i], 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  canvas.addEventListener("pointerdown", function (e) {
     hint.classList.remove("show");
-    nudge();
+    var pos = pointerPos(e);
+    var hit = hitTestBody(pos[0], pos[1]);
+    if (hit >= 0) {
+      draggingBody = hit;
+      paused = true;
+      pauseBtn.textContent = "Resume";
+      simTime = 0;
+      E0 = null;
+      resetTrailLayer();
+      s[hit * 4 + 2] = 0; // placing a body by hand starts it at rest
+      s[hit * 4 + 3] = 0;
+      canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
+      renderStatic();
+    } else {
+      draggingBody = -1;
+      nudge();
+    }
   });
+  canvas.addEventListener("pointermove", function (e) {
+    if (draggingBody < 0) return;
+    var pos = pointerPos(e);
+    var simPos = screenToSim(pos[0], pos[1]);
+    s[draggingBody * 4] = simPos[0];
+    s[draggingBody * 4 + 1] = simPos[1];
+    renderStatic();
+  });
+  window.addEventListener("pointerup", function () {
+    draggingBody = -1;
+  });
+
   resetBtn.addEventListener("click", function () {
     loadPreset(currentPreset);
   });
@@ -327,22 +401,7 @@
         lastPos[i] = [px, py];
       }
 
-      // Composite: solid background, the accumulated trail layer (1:1 raw
-      // pixel blit -- both canvases share the same device-pixel size), then
-      // the current body markers on top, drawn fresh each frame.
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.fillStyle = "#05060a";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(trailCanvas, 0, 0);
-      ctx.restore();
-
-      for (i = 0; i < 3; i++) {
-        ctx.fillStyle = COLORS[i];
-        ctx.beginPath();
-        ctx.arc(lastPos[i][0], lastPos[i][1], 3.5 + mass[i], 0, Math.PI * 2);
-        ctx.fill();
-      }
+      renderStatic();
 
       tVal.textContent = simTime.toFixed(1);
       var e = energy();
