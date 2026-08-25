@@ -1,0 +1,278 @@
+<meta charset="utf-8">
+<title>The Three-Body Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #05060a; --bg-raised: #10121c; --bg-raised-2: #171a28;
+    --ink: #eef1f7; --ink-dim: #838aa0; --line: #232842;
+    --accent: #ffb340; --accent-dim: #6b4d1e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: "IBM Plex Sans", system-ui, sans-serif; }
+  #stage { position: fixed; inset: 0; display: block; background: var(--bg); cursor: pointer; }
+  .scrim { position: fixed; top: 0; left: 0; right: 0; height: min(30vh, 280px); background: linear-gradient(180deg, rgba(5,6,10,0.86) 0%, rgba(5,6,10,0.5) 55%, rgba(5,6,10,0) 100%); pointer-events: none; }
+  header { position: fixed; top: 0; left: 0; max-width: min(640px, 66vw); padding: clamp(20px, 4vw, 44px) 0 0 clamp(20px, 4vw, 44px); pointer-events: none; }
+  @media (max-width: 560px) { header { max-width: calc(100vw - 40px); } .credit { display: none; } }
+  h1 { margin: 0; font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-weight: 400; font-size: clamp(2.1rem, 6vw, 4.2rem); line-height: 1.02; letter-spacing: -0.01em; text-wrap: balance; color: var(--ink); }
+  .sub { margin: 0.6em 0 0; max-width: 34em; font-size: clamp(0.92rem, 1.6vw, 1.08rem); line-height: 1.5; color: var(--ink-dim); text-wrap: balance; }
+  .sub b { color: var(--ink); font-weight: 500; }
+  .credit { position: fixed; top: clamp(20px, 4vw, 44px); right: clamp(20px, 4vw, 44px); text-align: right; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.02em; color: var(--ink-dim); line-height: 1.6; }
+  .credit a { color: var(--ink-dim); text-decoration: none; border-bottom: 1px solid var(--line); transition: color 0.15s, border-color 0.15s; }
+  .credit a:hover { color: var(--accent); border-color: var(--accent-dim); }
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 1em 0 0; pointer-events: auto; }
+  .presets .lbl { font-family: "IBM Plex Mono", monospace; font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-dim); align-self: center; margin-right: 2px; }
+  .pill { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; letter-spacing: 0.02em; color: var(--ink-dim); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s; }
+  .pill:hover, .pill:focus-visible { border-color: var(--accent-dim); color: var(--accent); outline: none; }
+  .pill.active { border-color: var(--accent); color: var(--accent); background: rgba(255,179,64,0.08); }
+  .dock { position: fixed; left: 50%; bottom: clamp(14px, 3vw, 28px); transform: translateX(-50%); display: flex; align-items: stretch; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.5); max-width: calc(100vw - 24px); }
+  .panel { background: var(--bg-raised); padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 150px; }
+  .btnrow { display: flex; gap: 8px; align-items: center; justify-content: center; }
+  button { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); background: var(--bg-raised-2); border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+  button:hover { border-color: var(--accent-dim); color: var(--accent); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .readout { display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 12px 16px; background: var(--bg-raised); min-width: 168px; }
+  .readout .row { display: flex; justify-content: space-between; gap: 10px; font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--ink-dim); }
+  .readout .row .v { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .hint { position: fixed; left: 50%; bottom: calc(clamp(14px, 3vw, 28px) + 62px); transform: translateX(-50%); font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--ink-dim); letter-spacing: 0.02em; pointer-events: none; opacity: 0; transition: opacity 0.5s ease 2.2s; text-align: center; }
+  .hint.show { opacity: 1; }
+  @media (max-width: 640px) { .dock { flex-wrap: wrap; } }
+</style>
+
+<canvas id="stage"></canvas>
+<div class="scrim"></div>
+
+<header>
+  <h1>The Three-Body&nbsp;Problem</h1>
+  <p class="sub">Two bodies orbiting under gravity trace a clean, predictable ellipse forever. Add a third and, in general, there's no equation for where they end up &mdash; this is the problem that led Poincar&eacute; to discover chaos in the first place, in 1887. <b>Click anywhere</b> to nudge every body's velocity a little &mdash; and watch a perfect dance become unrecognizable.</p>
+  <div class="presets">
+    <span class="lbl">Try:</span>
+    <button class="pill" data-preset="eight">Figure-eight &middot; stable</button>
+    <button class="pill" data-preset="pythagorean">Pythagorean &middot; chaotic</button>
+  </div>
+</header>
+
+<div class="credit">
+  real Newtonian gravity, RK4-integrated<br>
+  part of <a href="https://github.com/jinchen7-cmd/Chaos" target="_blank" rel="noopener">a gallery of chaos toys &rarr;</a>
+</div>
+
+<div class="hint" id="hint">click to nudge their velocities</div>
+
+<div class="dock">
+  <div class="panel">
+    <div class="btnrow">
+      <button id="pauseBtn">Pause</button>
+      <button id="nudgeBtn">Nudge</button>
+    </div>
+  </div>
+  <div class="readout">
+    <div class="row"><span>elapsed</span><span class="v" id="tVal">0.0</span></div>
+    <div class="row"><span>energy drift</span><span class="v" id="eVal">0.00%</span></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var canvas = document.getElementById("stage");
+  var ctx = canvas.getContext("2d");
+  var DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  var hint = document.getElementById("hint");
+  var pauseBtn = document.getElementById("pauseBtn");
+  var nudgeBtn = document.getElementById("nudgeBtn");
+  var tVal = document.getElementById("tVal");
+  var eVal = document.getElementById("eVal");
+  var presetBtns = document.querySelectorAll(".pill[data-preset]");
+
+  var G = 1;
+  var SOFT2 = 0.0025;
+  var DT = 0.0015, SUBSTEPS = 8;
+  var COLORS = ["#ffb340", "#5ec8ff", "#ff6ea8"];
+
+  // state: flat array of 3 bodies x [x,y,vx,vy]
+  var mass = [1, 1, 1];
+  var s = null;
+  var trails = [[], [], []];
+  var paused = false;
+  var simTime = 0;
+  var E0 = null;
+
+  var PRESETS = {
+    eight: {
+      mass: [1, 1, 1],
+      state: [
+        0.97000436, -0.24308753, 0.4662036850, 0.4323657300,
+        -0.97000436, 0.24308753, 0.4662036850, 0.4323657300,
+        0, 0, -0.93240737, -0.86473146
+      ]
+    },
+    pythagorean: {
+      mass: [3, 4, 5],
+      state: [
+        1, 3, 0, 0,
+        -2, -1, 0, 0,
+        1, -1, 0, 0
+      ]
+    }
+  };
+
+  function loadPreset(name) {
+    var p = PRESETS[name];
+    mass = p.mass.slice();
+    s = p.state.slice();
+    trails = [[], [], []];
+    simTime = 0;
+    E0 = null;
+    presetBtns.forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-preset") === name);
+    });
+  }
+
+  function deriv(state) {
+    var out = new Array(12);
+    for (var i = 0; i < 3; i++) {
+      var xi = state[i * 4], yi = state[i * 4 + 1];
+      var ax = 0, ay = 0;
+      for (var j = 0; j < 3; j++) {
+        if (j === i) continue;
+        var xj = state[j * 4], yj = state[j * 4 + 1];
+        var dx = xj - xi, dy = yj - yi;
+        var d2 = dx * dx + dy * dy + SOFT2;
+        var invD3 = 1 / (d2 * Math.sqrt(d2));
+        ax += G * mass[j] * dx * invD3;
+        ay += G * mass[j] * dy * invD3;
+      }
+      out[i * 4] = state[i * 4 + 2];     // dx/dt = vx
+      out[i * 4 + 1] = state[i * 4 + 3]; // dy/dt = vy
+      out[i * 4 + 2] = ax;
+      out[i * 4 + 3] = ay;
+    }
+    return out;
+  }
+
+  function rk4(state, dt) {
+    var k1 = deriv(state);
+    var s2 = addScaled(state, k1, dt / 2);
+    var k2 = deriv(s2);
+    var s3 = addScaled(state, k2, dt / 2);
+    var k3 = deriv(s3);
+    var s4 = addScaled(state, k3, dt);
+    var k4 = deriv(s4);
+    var out = new Array(12);
+    for (var i = 0; i < 12; i++) {
+      out[i] = state[i] + (dt / 6) * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]);
+    }
+    return out;
+  }
+  function addScaled(a, b, f) {
+    var out = new Array(12);
+    for (var i = 0; i < 12; i++) out[i] = a[i] + b[i] * f;
+    return out;
+  }
+
+  function energy() {
+    var ke = 0;
+    for (var i = 0; i < 3; i++) {
+      var vx = s[i * 4 + 2], vy = s[i * 4 + 3];
+      ke += 0.5 * mass[i] * (vx * vx + vy * vy);
+    }
+    var pe = 0;
+    for (i = 0; i < 3; i++) {
+      for (var j = i + 1; j < 3; j++) {
+        var dx = s[j * 4] - s[i * 4], dy = s[j * 4 + 1] - s[i * 4 + 1];
+        var d = Math.sqrt(dx * dx + dy * dy + SOFT2);
+        pe -= G * mass[i] * mass[j] / d;
+      }
+    }
+    return ke + pe;
+  }
+
+  function nudge() {
+    for (var i = 0; i < 3; i++) {
+      s[i * 4 + 2] += (Math.random() - 0.5) * 0.03;
+      s[i * 4 + 3] += (Math.random() - 0.5) * 0.03;
+    }
+    // "energy drift" tracks integrator error, not the energy this deliberately
+    // injects -- rebaseline so the readout stays meaningful after a nudge.
+    E0 = null;
+  }
+
+  var W = 0, H = 0, cx = 0, cy = 0, scale = 100;
+  function resize() {
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W * DPR; canvas.height = H * DPR;
+    canvas.style.width = W + "px"; canvas.style.height = H + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    cx = W * 0.5; cy = H * 0.56;
+    scale = Math.min(W, H) * 0.16;
+    ctx.fillStyle = "#05060a";
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  canvas.addEventListener("pointerdown", function () {
+    hint.classList.remove("show");
+    nudge();
+  });
+  nudgeBtn.addEventListener("click", nudge);
+  pauseBtn.addEventListener("click", function () {
+    paused = !paused;
+    pauseBtn.textContent = paused ? "Resume" : "Pause";
+  });
+  presetBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      loadPreset(btn.getAttribute("data-preset"));
+    });
+  });
+
+  function step() {
+    if (!paused) {
+      for (var k = 0; k < SUBSTEPS; k++) {
+        s = rk4(s, DT);
+        simTime += DT;
+      }
+      for (var i = 0; i < 3; i++) {
+        trails[i].push([s[i * 4], s[i * 4 + 1]]);
+        if (trails[i].length > 500) trails[i].shift();
+      }
+      if (E0 === null) E0 = energy();
+
+      ctx.fillStyle = "rgba(5,6,10,0.16)";
+      ctx.fillRect(0, 0, W, H);
+      for (i = 0; i < 3; i++) {
+        var tr = trails[i];
+        ctx.strokeStyle = COLORS[i];
+        ctx.lineWidth = 1.1;
+        ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        for (var p = 0; p < tr.length; p++) {
+          var px = cx + tr[p][0] * scale, py = cy + tr[p][1] * scale;
+          if (p === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        var last = tr[tr.length - 1];
+        ctx.fillStyle = COLORS[i];
+        ctx.beginPath();
+        ctx.arc(cx + last[0] * scale, cy + last[1] * scale, 3.5 + mass[i], 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      tVal.textContent = simTime.toFixed(1);
+      var e = energy();
+      var drift = E0 ? Math.abs((e - E0) / E0) * 100 : 0;
+      eVal.textContent = drift.toFixed(2) + "%";
+    }
+    requestAnimationFrame(step);
+  }
+
+  window.addEventListener("resize", resize);
+  loadPreset("eight");
+  resize();
+  requestAnimationFrame(step);
+  setTimeout(function () { hint.classList.add("show"); }, 400);
+  setTimeout(function () { hint.classList.remove("show"); }, 7000);
+})();
+</script>

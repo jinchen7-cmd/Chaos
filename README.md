@@ -1,18 +1,17 @@
 # Chaos
 
-Three things to play with, then the research they're standing in for.
+Eight things to play with, then the research they're standing in for. Ecology, statistical physics, celestial mechanics, complex dynamics, cellular automata — different corners of the same subject: what happens when a system is simple to describe and impossible to predict.
 
-## 🦋 [The Butterfly Effect →](https://jinchen7-cmd.github.io/Chaos/butterfly-effect.html)
-
-Sixteen physics-accurate double pendulums, released a hair's width apart. Drag to set an angle, let go, and watch identical starting conditions fan out into total disagreement in a couple of seconds — with sound, quick-start presets, a live Lyapunov-divergence readout, and a stopwatch that times how long the swarm holds together before "chaos" officially wins.
-
-## 🌳 [Where Order Breaks →](https://jinchen7-cmd.github.io/Chaos/bifurcation.html)
-
-The logistic map's bifurcation diagram — the other icon of chaos theory, and arguably the stranger one: one line of algebra, `x ← r·x·(1−x)`, that goes from boring to periodic to fully chaotic as you turn one knob. Drag a box to zoom in anywhere; the fig-tree pattern repeats at every scale, forever. Click a point to watch that growth rate play out live as a cobweb plot.
-
-## 🔺 [The Chaos Game →](https://jinchen7-cmd.github.io/Chaos/chaos-game.html)
-
-The flip side: pick a corner of a triangle at random, move halfway to it, plot the point, repeat forever — with no plan and no memory. A perfect fractal falls out of pure randomness. Click anywhere, even outside the shape, to restart: it always finds its way back to the same pattern.
+| | |
+|---|---|
+| 🦋 **[The Butterfly Effect](https://jinchen7-cmd.github.io/Chaos/butterfly-effect.html)** | Sixteen double pendulums released a hair's width apart fan out into total disagreement in seconds. Sound, presets, a live divergence readout, a race-the-chaos stopwatch. |
+| 🌳 **[Where Order Breaks](https://jinchen7-cmd.github.io/Chaos/bifurcation.html)** | The logistic map's bifurcation diagram: `x ← r·x·(1−x)` going from boring to chaotic as one knob turns. Zoom in anywhere — the fig-tree pattern repeats forever. |
+| 🔺 **[The Chaos Game](https://jinchen7-cmd.github.io/Chaos/chaos-game.html)** | Pick a random corner, move halfway there, repeat forever with no memory. A perfect fractal falls out of pure randomness. |
+| ⬛ **[The Simplest Chaos](https://jinchen7-cmd.github.io/Chaos/rule30.html)** | An 8-line lookup table (Wolfram's Rule 30) turns a single black cell into a pattern irregular enough to generate random numbers — deterministically. |
+| 💧 **[One More Drop](https://jinchen7-cmd.github.io/Chaos/percolation.html)** | Fill a grid at random, cell by cell. Below a sharp threshold: scattered puddles. Above it: one cluster suddenly spans the whole grid. A phase transition you can click through. |
+| 🦊 **[Boom and Bust](https://jinchen7-cmd.github.io/Chaos/boom-and-bust.html)** | The actual food-chain model behind the research below, live and draggable. Push the carrying capacity up and watch stable cycles turn chaotic, then collapse. |
+| 🪐 **[The Three-Body Problem](https://jinchen7-cmd.github.io/Chaos/three-body.html)** | Real gravity, RK4-integrated — the problem that led Poincaré to discover chaos in 1887. Click to nudge the bodies and watch a stable dance fall apart. |
+| 🌀 **[The Mandelbrot Set](https://jinchen7-cmd.github.io/Chaos/mandelbrot.html)** | Drag to zoom into the most famous fractal in complex dynamics. The boundary never simplifies, at any depth. |
 
 That unpredictability — and the order hiding underneath it — is the whole problem this repo is about, and the rest of it is about clawing some of it back with machine learning.
 

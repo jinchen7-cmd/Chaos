@@ -1,0 +1,212 @@
+<meta charset="utf-8">
+<title>One More Drop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c12; --bg-raised: #12141e; --bg-raised-2: #191c29;
+    --ink: #eef1f7; --ink-dim: #838aa0; --line: #262b3c;
+    --accent: #ffb340; --accent-dim: #6b4d1e;
+    --occ: #3a4258;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: "IBM Plex Sans", system-ui, sans-serif; }
+  #stage { position: fixed; inset: 0; display: block; background: var(--bg); cursor: pointer; }
+  .scrim { position: fixed; top: 0; left: 0; right: 0; height: min(30vh, 280px); background: linear-gradient(180deg, rgba(10,12,18,0.86) 0%, rgba(10,12,18,0.5) 55%, rgba(10,12,18,0) 100%); pointer-events: none; }
+  header { position: fixed; top: 0; left: 0; max-width: min(640px, 66vw); padding: clamp(20px, 4vw, 44px) 0 0 clamp(20px, 4vw, 44px); pointer-events: none; }
+  @media (max-width: 560px) { header { max-width: calc(100vw - 40px); } .credit { display: none; } }
+  h1 { margin: 0; font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-weight: 400; font-size: clamp(2.1rem, 6vw, 4.2rem); line-height: 1.02; letter-spacing: -0.01em; text-wrap: balance; color: var(--ink); }
+  .sub { margin: 0.6em 0 0; max-width: 34em; font-size: clamp(0.92rem, 1.6vw, 1.08rem); line-height: 1.5; color: var(--ink-dim); text-wrap: balance; }
+  .sub b { color: var(--ink); font-weight: 500; }
+  .sub code { font-family: "IBM Plex Mono", monospace; font-size: 0.92em; color: var(--accent); }
+  .credit { position: fixed; top: clamp(20px, 4vw, 44px); right: clamp(20px, 4vw, 44px); text-align: right; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.02em; color: var(--ink-dim); line-height: 1.6; }
+  .credit a { color: var(--ink-dim); text-decoration: none; border-bottom: 1px solid var(--line); transition: color 0.15s, border-color 0.15s; }
+  .credit a:hover { color: var(--accent); border-color: var(--accent-dim); }
+  .dock { position: fixed; left: 50%; bottom: clamp(14px, 3vw, 28px); transform: translateX(-50%); display: flex; align-items: stretch; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.45); max-width: calc(100vw - 24px); }
+  .panel { background: var(--bg-raised); padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 150px; }
+  .panel .label { font-family: "IBM Plex Mono", monospace; font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-dim); display: flex; justify-content: space-between; gap: 8px; }
+  .panel .label .val { color: var(--accent); font-variant-numeric: tabular-nums; }
+  input[type="range"] { -webkit-appearance: none; appearance: none; width: 128px; height: 3px; background: var(--line); border-radius: 2px; outline: none; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 0 3px rgba(255,179,64,0.18); }
+  input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border: none; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 0 3px rgba(255,179,64,0.18); }
+  .btnrow { display: flex; gap: 8px; align-items: center; justify-content: center; }
+  button { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); background: var(--bg-raised-2); border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+  button:hover { border-color: var(--accent-dim); color: var(--accent); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .readout { display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 12px 16px; background: var(--bg-raised); min-width: 168px; }
+  .readout .row { display: flex; justify-content: space-between; gap: 10px; font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--ink-dim); }
+  .readout .row .v { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .readout .row .v.yes { color: var(--accent); }
+  @media (max-width: 640px) { .dock { flex-wrap: wrap; } }
+</style>
+
+<canvas id="stage"></canvas>
+<div class="scrim"></div>
+
+<header>
+  <h1>One More&nbsp;Drop</h1>
+  <p class="sub">Every cell is independently filled with probability <code>p</code>. Below <code>p &asymp; 0.593</code>, you get scattered puddles. Above it, one cluster suddenly spans the entire grid, top to bottom &mdash; not gradually, but as a sudden jump. <b>Drag the slider</b> across that line. <b>Click a cell</b> to toggle it by hand, or hit reroll for a fresh draw at the same <code>p</code>.</p>
+</header>
+
+<div class="credit">
+  site percolation &mdash; a textbook phase transition<br>
+  part of <a href="https://github.com/jinchen7-cmd/Chaos" target="_blank" rel="noopener">a gallery of chaos toys &rarr;</a>
+</div>
+
+<div class="dock">
+  <div class="panel">
+    <div class="label"><span>p</span><span class="val" id="pVal">0.550</span></div>
+    <input type="range" id="pSlider" min="0" max="1000" value="550" aria-label="Occupation probability">
+  </div>
+  <div class="panel">
+    <div class="btnrow">
+      <button id="rerollBtn">Reroll</button>
+    </div>
+  </div>
+  <div class="readout">
+    <div class="row"><span>spans top&ndash;bottom</span><span class="v" id="spanVal">no</span></div>
+    <div class="row"><span>largest cluster</span><span class="v" id="clusterVal">0%</span></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var canvas = document.getElementById("stage");
+  var ctx = canvas.getContext("2d");
+  var DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+  var pSlider = document.getElementById("pSlider");
+  var pVal = document.getElementById("pVal");
+  var rerollBtn = document.getElementById("rerollBtn");
+  var spanVal = document.getElementById("spanVal");
+  var clusterVal = document.getElementById("clusterVal");
+
+  var GRID = 90;
+  var W = 0, H = 0, cell = 8, gx = 0, gy = 0;
+  var p = 0.55;
+  var occ = null;      // Uint8Array, occ[r*GRID+c]
+  var parent = null;   // union-find
+  var rank = null;
+
+  function resize() {
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W * DPR; canvas.height = H * DPR;
+    canvas.style.width = W + "px"; canvas.style.height = H + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    var avail = Math.min(W * 0.86, (H - 140));
+    cell = Math.max(3, Math.floor(avail / GRID));
+    gx = (W - cell * GRID) / 2;
+    gy = Math.max(90, (H - cell * GRID) / 2 - 10);
+    regenerate();
+  }
+
+  function idx(r, c) { return r * GRID + c; }
+
+  function find(x) {
+    while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+    return x;
+  }
+  function union(a, b) {
+    var ra = find(a), rb = find(b);
+    if (ra === rb) return;
+    if (rank[ra] < rank[rb]) { var t = ra; ra = rb; rb = t; }
+    parent[rb] = ra;
+    if (rank[ra] === rank[rb]) rank[ra]++;
+  }
+
+  function regenerate() {
+    occ = new Uint8Array(GRID * GRID);
+    for (var i = 0; i < occ.length; i++) occ[i] = Math.random() < p ? 1 : 0;
+    analyze();
+  }
+
+  function analyze() {
+    var n = GRID * GRID;
+    parent = new Int32Array(n);
+    rank = new Uint8Array(n);
+    for (var i = 0; i < n; i++) parent[i] = i;
+
+    for (var r = 0; r < GRID; r++) {
+      for (var c = 0; c < GRID; c++) {
+        if (!occ[idx(r, c)]) continue;
+        if (c + 1 < GRID && occ[idx(r, c + 1)]) union(idx(r, c), idx(r, c + 1));
+        if (r + 1 < GRID && occ[idx(r + 1, c)]) union(idx(r, c), idx(r + 1, c));
+      }
+    }
+
+    var size = {};
+    var maxSize = 0, maxRoot = -1;
+    for (r = 0; r < GRID; r++) {
+      for (c = 0; c < GRID; c++) {
+        if (!occ[idx(r, c)]) continue;
+        var root = find(idx(r, c));
+        size[root] = (size[root] || 0) + 1;
+        if (size[root] > maxSize) { maxSize = size[root]; maxRoot = root; }
+      }
+    }
+
+    var topRoots = {};
+    for (c = 0; c < GRID; c++) {
+      if (occ[idx(0, c)]) topRoots[find(idx(0, c))] = true;
+    }
+    var spans = false, spanRoot = -1;
+    for (c = 0; c < GRID; c++) {
+      if (occ[idx(GRID - 1, c)]) {
+        var root2 = find(idx(GRID - 1, c));
+        if (topRoots[root2]) { spans = true; spanRoot = root2; break; }
+      }
+    }
+
+    render(spans ? spanRoot : maxRoot, spans);
+    spanVal.textContent = spans ? "yes" : "no";
+    spanVal.classList.toggle("yes", spans);
+    clusterVal.textContent = (100 * maxSize / n).toFixed(1) + "%";
+  }
+
+  function render(highlightRoot, spans) {
+    ctx.fillStyle = "#0a0c12";
+    ctx.fillRect(0, 0, W, H);
+    var gap = cell > 5 ? 1 : 0;
+    for (var r = 0; r < GRID; r++) {
+      for (var c = 0; c < GRID; c++) {
+        var i = idx(r, c);
+        if (!occ[i]) continue;
+        var isBig = highlightRoot >= 0 && find(i) === highlightRoot;
+        ctx.fillStyle = isBig ? (spans ? "#ffb340" : "#e0a860") : "#3a4258";
+        ctx.fillRect(gx + c * cell, gy + r * cell, cell - gap, cell - gap);
+      }
+    }
+    ctx.strokeStyle = "rgba(238,241,247,0.25)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(gx - 1, gy - 1, cell * GRID + 2, cell * GRID + 2);
+  }
+
+  canvas.addEventListener("pointerdown", function (e) {
+    var r = canvas.getBoundingClientRect();
+    var cx = e.clientX - r.left, cy = e.clientY - r.top;
+    var col = Math.floor((cx - gx) / cell);
+    var row = Math.floor((cy - gy) / cell);
+    if (row >= 0 && row < GRID && col >= 0 && col < GRID) {
+      occ[idx(row, col)] ^= 1;
+      analyze();
+    } else {
+      regenerate();
+    }
+  });
+
+  pSlider.addEventListener("input", function () {
+    p = parseInt(pSlider.value, 10) / 1000;
+    pVal.textContent = p.toFixed(3);
+    regenerate();
+  });
+  rerollBtn.addEventListener("click", regenerate);
+
+  window.addEventListener("resize", resize);
+  pVal.textContent = p.toFixed(3);
+  resize();
+})();
+</script>

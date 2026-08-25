@@ -1,0 +1,273 @@
+<meta charset="utf-8">
+<title>The Mandelbrot Set</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c12; --bg-raised: #12141e; --bg-raised-2: #191c29;
+    --ink: #eef1f7; --ink-dim: #838aa0; --line: #262b3c;
+    --accent: #ffb340; --accent-dim: #6b4d1e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: "IBM Plex Sans", system-ui, sans-serif; }
+  #stage { position: fixed; inset: 0; display: block; background: var(--bg); cursor: crosshair; image-rendering: -webkit-optimize-contrast; }
+  .scrim { position: fixed; top: 0; left: 0; right: 0; height: min(30vh, 280px); background: linear-gradient(180deg, rgba(10,12,18,0.86) 0%, rgba(10,12,18,0.5) 55%, rgba(10,12,18,0) 100%); pointer-events: none; }
+  header { position: fixed; top: 0; left: 0; max-width: min(640px, 66vw); padding: clamp(20px, 4vw, 44px) 0 0 clamp(20px, 4vw, 44px); pointer-events: none; }
+  @media (max-width: 560px) { header { max-width: calc(100vw - 40px); } .credit { display: none; } }
+  h1 { margin: 0; font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-weight: 400; font-size: clamp(2.1rem, 6vw, 4.2rem); line-height: 1.02; letter-spacing: -0.01em; text-wrap: balance; color: var(--ink); }
+  .sub { margin: 0.6em 0 0; max-width: 34em; font-size: clamp(0.92rem, 1.6vw, 1.08rem); line-height: 1.5; color: var(--ink-dim); text-wrap: balance; }
+  .sub b { color: var(--ink); font-weight: 500; }
+  .sub code { font-family: "IBM Plex Mono", monospace; font-size: 0.92em; color: var(--accent); }
+  .credit { position: fixed; top: clamp(20px, 4vw, 44px); right: clamp(20px, 4vw, 44px); text-align: right; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.02em; color: var(--ink-dim); line-height: 1.6; }
+  .credit a { color: var(--ink-dim); text-decoration: none; border-bottom: 1px solid var(--line); transition: color 0.15s, border-color 0.15s; }
+  .credit a:hover { color: var(--accent); border-color: var(--accent-dim); }
+  .dock { position: fixed; left: 50%; bottom: clamp(14px, 3vw, 28px); transform: translateX(-50%); display: flex; align-items: stretch; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.45); max-width: calc(100vw - 24px); }
+  .panel { background: var(--bg-raised); padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+  .panel .label { font-family: "IBM Plex Mono", monospace; font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-dim); display: flex; justify-content: space-between; gap: 10px; }
+  .panel .label .val { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .btnrow { display: flex; gap: 8px; align-items: center; justify-content: center; }
+  button { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); background: var(--bg-raised-2); border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+  button:hover { border-color: var(--accent-dim); color: var(--accent); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .hint { position: fixed; left: 50%; bottom: calc(clamp(14px, 3vw, 28px) + 62px); transform: translateX(-50%); font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--ink-dim); letter-spacing: 0.02em; pointer-events: none; opacity: 0; transition: opacity 0.5s ease 2.2s; text-align: center; }
+  .hint.show { opacity: 1; }
+  .busy { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; color: var(--ink-dim); letter-spacing: 0.06em; text-transform: uppercase; opacity: 0; transition: opacity 0.15s; pointer-events: none; }
+  .busy.show { opacity: 1; }
+  @media (max-width: 640px) { .dock { flex-wrap: wrap; } }
+</style>
+
+<canvas id="stage"></canvas>
+<div class="scrim"></div>
+
+<header>
+  <h1>The Mandelbrot&nbsp;Set</h1>
+  <p class="sub">For every point <code>c</code>, start <code>z = 0</code> and repeat <code>z &larr; z&sup2; + c</code>. Some points stay bounded forever &mdash; that's the black. Everything else is colored by how fast it escapes. <b>Drag a box to zoom</b>, or <b>click</b> to zoom in on a point. The boundary never simplifies, at any depth.</p>
+</header>
+
+<div class="credit">
+  the most famous fractal in complex dynamics<br>
+  part of <a href="https://github.com/jinchen7-cmd/Chaos" target="_blank" rel="noopener">a gallery of chaos toys &rarr;</a>
+</div>
+
+<div class="hint" id="hint">drag to zoom &middot; click to zoom in</div>
+<div class="busy" id="busy">rendering&hellip;</div>
+
+<div class="dock">
+  <div class="panel">
+    <div class="label"><span>center</span><span class="val" id="centerVal">&minus;0.5, 0.0</span></div>
+    <div class="label"><span>zoom</span><span class="val" id="zoomVal">1&times;</span></div>
+  </div>
+  <div class="panel">
+    <div class="btnrow">
+      <button id="resetBtn">Reset zoom</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var canvas = document.getElementById("stage");
+  var ctx = canvas.getContext("2d");
+  var DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  var hint = document.getElementById("hint");
+  var busy = document.getElementById("busy");
+  var resetBtn = document.getElementById("resetBtn");
+  var centerVal = document.getElementById("centerVal");
+  var zoomVal = document.getElementById("zoomVal");
+
+  var W = 0, H = 0;
+  var BUF_W = 720, BUF_H = 460;
+  var buffer = document.createElement("canvas");
+  buffer.width = BUF_W; buffer.height = BUF_H;
+  var bctx = buffer.getContext("2d");
+  var imgData = bctx.createImageData(BUF_W, BUF_H);
+
+  var FULL_W = 3.6;
+  var view = { cx: -0.5, cy: 0.0, w: FULL_W };
+
+  var PALETTE_SIZE = 512;
+  var palette = buildPalette(PALETTE_SIZE);
+
+  function buildPalette(n) {
+    var pal = new Uint8Array((n + 1) * 3);
+    for (var i = 0; i <= n; i++) {
+      var t = i / n; // 0 = fast escape, 1 = slow escape
+      var r, g, b;
+      if (t < 0.5) {
+        var u = t / 0.5;
+        r = lerp(10, 107, u); g = lerp(12, 77, u); b = lerp(18, 30, u);
+      } else {
+        var v = (t - 0.5) / 0.5;
+        r = lerp(107, 255, v); g = lerp(77, 179, v); b = lerp(30, 64, v);
+      }
+      pal[i * 3] = r; pal[i * 3 + 1] = g; pal[i * 3 + 2] = b;
+    }
+    return pal;
+  }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function maxIterFor(w) {
+    var depth = Math.log2(FULL_W / w);
+    return Math.min(500, 90 + Math.floor(depth * 34));
+  }
+
+  // Shows the busy indicator, then defers the (synchronous, blocking) render
+  // by enough of a gap for the browser to actually paint that state change
+  // before the heavy loop starts.
+  function requestRender() {
+    busy.classList.add("show");
+    setTimeout(renderFractal, 20);
+  }
+
+  function renderFractal() {
+    var aspect = BUF_H / BUF_W;
+    var w = view.w, h = view.w * aspect;
+    var x0 = view.cx - w / 2, y0 = view.cy - h / 2;
+    var maxIter = maxIterFor(w);
+    var data = imgData.data;
+
+    for (var py = 0; py < BUF_H; py++) {
+      var ci = y0 + (py / BUF_H) * h;
+      for (var px = 0; px < BUF_W; px++) {
+        var cr = x0 + (px / BUF_W) * w;
+        var zr = 0, zi = 0, zr2 = 0, zi2 = 0;
+        var iter = 0;
+        while (zr2 + zi2 <= 4 && iter < maxIter) {
+          zi = 2 * zr * zi + ci;
+          zr = zr2 - zi2 + cr;
+          zr2 = zr * zr;
+          zi2 = zi * zi;
+          iter++;
+        }
+        var offset = (py * BUF_W + px) * 4;
+        if (iter >= maxIter) {
+          data[offset] = 6; data[offset + 1] = 7; data[offset + 2] = 11;
+        } else {
+          var logModZ = 0.5 * Math.log2(zr2 + zi2 + 1e-9); // log2(|z|)
+          var smooth = iter + 1 - Math.log2(logModZ);
+          var t = Math.max(0, Math.min(1, smooth / maxIter));
+          var pi = Math.floor(t * PALETTE_SIZE);
+          data[offset] = palette[pi * 3];
+          data[offset + 1] = palette[pi * 3 + 1];
+          data[offset + 2] = palette[pi * 3 + 2];
+        }
+        data[offset + 3] = 255;
+      }
+    }
+    bctx.putImageData(imgData, 0, 0);
+    present();
+    updateReadout();
+    busy.classList.remove("show");
+  }
+
+  // The buffer always has a fixed BUF_W:BUF_H aspect ratio. Rather than
+  // stretch it to fill an arbitrarily-shaped window (which would distort
+  // the fractal and desync click coordinates from what's drawn), letterbox
+  // it into the largest centered rect of the correct aspect ratio, and route
+  // every pixel<->complex mapping through that same rect.
+  function fitRect() {
+    var targetAspect = BUF_W / BUF_H;
+    var rw, rh;
+    if (W / H > targetAspect) { rh = H; rw = H * targetAspect; }
+    else { rw = W; rh = W / targetAspect; }
+    return { x: (W - rw) / 2, y: (H - rh) / 2, w: rw, h: rh };
+  }
+
+  function present() {
+    ctx.fillStyle = "#0a0c12";
+    ctx.fillRect(0, 0, W, H);
+    var r = fitRect();
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(buffer, 0, 0, BUF_W, BUF_H, r.x, r.y, r.w, r.h);
+  }
+
+  function updateReadout() {
+    centerVal.textContent = view.cx.toFixed(6) + ", " + view.cy.toFixed(6);
+    var z = FULL_W / view.w;
+    zoomVal.textContent = (z < 10 ? z.toFixed(1) : Math.round(z).toLocaleString()) + "×";
+  }
+
+  function resize() {
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W * DPR; canvas.height = H * DPR;
+    canvas.style.width = W + "px"; canvas.style.height = H + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    requestRender();
+  }
+
+  // --- drag-to-zoom / click-to-zoom, deferred so the UI thread can paint
+  // "rendering..." before the (synchronous, blocking) fractal computation --
+  var dragStart = null, dragNow = null, isDown = false;
+
+  function pointerPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var cx = (e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX) - r.left;
+    var cy = (e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY) - r.top;
+    return [cx, cy];
+  }
+
+  function toComplex(px, py) {
+    var r = fitRect();
+    var w = view.w, h = view.w * (BUF_H / BUF_W);
+    var x0 = view.cx - w / 2, y0 = view.cy - h / 2;
+    var fx = (px - r.x) / r.w, fy = (py - r.y) / r.h;
+    return [x0 + fx * w, y0 + fy * h];
+  }
+
+  canvas.addEventListener("pointerdown", function (e) {
+    isDown = true;
+    hint.classList.remove("show");
+    var p = pointerPos(e);
+    dragStart = p; dragNow = p;
+    canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
+  });
+
+  canvas.addEventListener("pointermove", function (e) {
+    if (!isDown) return;
+    dragNow = pointerPos(e);
+    present();
+    var x0 = Math.min(dragStart[0], dragNow[0]), x1 = Math.max(dragStart[0], dragNow[0]);
+    var y0 = Math.min(dragStart[1], dragNow[1]), y1 = Math.max(dragStart[1], dragNow[1]);
+    ctx.strokeStyle = "rgba(255,179,64,0.85)";
+    ctx.setLineDash([4, 3]);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+    ctx.setLineDash([]);
+  });
+
+  window.addEventListener("pointerup", function () {
+    if (!isDown) return;
+    isDown = false;
+    var dx = Math.abs(dragNow[0] - dragStart[0]);
+    var dy = Math.abs(dragNow[1] - dragStart[1]);
+
+    if (dx < 8 && dy < 8) {
+      var c = toComplex(dragStart[0], dragStart[1]);
+      view.cx = c[0]; view.cy = c[1];
+      view.w = Math.max(view.w / 3, 1e-11);
+    } else {
+      var midX = (dragStart[0] + dragNow[0]) / 2, midY = (dragStart[1] + dragNow[1]) / 2;
+      var c2 = toComplex(midX, midY);
+      var r = fitRect();
+      var selW = Math.max(dx / r.w, dy / r.h);
+      view.w = Math.max(view.w * selW, 1e-11);
+      view.cx = c2[0]; view.cy = c2[1];
+    }
+    dragStart = null;
+    requestRender();
+  });
+
+  resetBtn.addEventListener("click", function () {
+    view = { cx: -0.5, cy: 0.0, w: FULL_W };
+    requestRender();
+  });
+
+  window.addEventListener("resize", resize);
+  resize();
+  setTimeout(function () { hint.classList.add("show"); }, 400);
+  setTimeout(function () { hint.classList.remove("show"); }, 7000);
+})();
+</script>
