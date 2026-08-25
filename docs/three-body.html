@@ -81,7 +81,7 @@
     <input type="range" id="speedSlider" min="0.25" max="4" step="0.05" value="1" aria-label="Simulation speed">
     <div class="btnrow" style="margin-top:8px;">
       <button id="pauseBtn">Pause</button>
-      <button id="nudgeBtn">Nudge</button>
+      <button id="resetBtn">Reset</button>
     </div>
   </div>
   <div class="readout">
@@ -105,7 +105,7 @@
   var DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
   var hint = document.getElementById("hint");
   var pauseBtn = document.getElementById("pauseBtn");
-  var nudgeBtn = document.getElementById("nudgeBtn");
+  var resetBtn = document.getElementById("resetBtn");
   var tVal = document.getElementById("tVal");
   var eVal = document.getElementById("eVal");
   var presetBtns = document.querySelectorAll(".pill[data-preset]");
@@ -135,6 +135,7 @@
   var simTime = 0;
   var E0 = null;
   var speedMult = 1;
+  var currentPreset = "eight";
 
   var PRESETS = {
     eight: {
@@ -173,6 +174,7 @@
   }
 
   function loadPreset(name) {
+    currentPreset = name;
     var p = PRESETS[name];
     mass = p.mass.slice();
     s = p.state.slice();
@@ -271,7 +273,9 @@
     hint.classList.remove("show");
     nudge();
   });
-  nudgeBtn.addEventListener("click", nudge);
+  resetBtn.addEventListener("click", function () {
+    loadPreset(currentPreset);
+  });
   pauseBtn.addEventListener("click", function () {
     paused = !paused;
     pauseBtn.textContent = paused ? "Resume" : "Pause";
