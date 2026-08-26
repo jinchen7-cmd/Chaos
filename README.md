@@ -13,7 +13,44 @@ Eight things to play with, then the research they're standing in for. Ecology, s
 | 🪐 **[The Three-Body Problem](https://jinchen7-cmd.github.io/Chaos/three-body.html)** | Real gravity, RK4-integrated — the problem that led Poincaré to discover chaos in 1887. Click to nudge the bodies and watch a stable dance fall apart. |
 | 🌀 **[The Mandelbrot Set](https://jinchen7-cmd.github.io/Chaos/mandelbrot.html)** | Drag to zoom into the most famous fractal in complex dynamics. The boundary never simplifies, at any depth. |
 
-That unpredictability — and the order hiding underneath it — is the whole problem this repo is about, and the rest of it is about clawing some of it back with machine learning.
+That unpredictability — and the order hiding underneath it — is the whole problem this repo is about. Everything past this point is that problem taken seriously: a real analysis toolkit, then the research it's built for.
+
+---
+
+## `chaos_tools`: bring your own data
+
+The toys above show chaos happening. This is the actual math, packaged for a time series you provide — no equations, no known state dimension, just a column of numbers, which is the position you're actually in with any real measurement.
+
+```bash
+pip install -e ".[notebook]"
+```
+
+```python
+from chaos_tools import embedding, lyapunov, dimension
+
+tau = embedding.estimate_delay(x)                          # reconstruct a phase space...
+dim, _ = embedding.estimate_dimension(x, tau)               # ...without knowing how many dimensions it needs
+lle, *_ = lyapunov.largest_lyapunov_exponent(x, dim, tau, dt=dt)  # > 0 is the actual definition of chaotic
+d2, *_ = dimension.correlation_dimension(x, dim, tau)             # fractional means a strange attractor
+```
+
+| Module | What it does |
+|---|---|
+| `embedding` | Takens' delay-coordinate reconstruction from a single scalar signal, with automatic parameter selection: `estimate_delay` (first local minimum of average mutual information) and `estimate_dimension` (false nearest neighbors — Kennel, Brown & Abarbanel, 1992). |
+| `lyapunov` | Largest Lyapunov exponent (Rosenstein, Collins & De Luca, 1993) — a positive value *is* the mathematical definition of chaotic. |
+| `dimension` | Correlation dimension (Grassberger & Procaccia, 1983) — a fractional value is the signature of a strange attractor. |
+| `recurrence` | Recurrence plots and a determinism measure (Eckmann, Kamphorst & Ruelle, 1987). |
+
+Every one of these is checked against the Lorenz system in [`tests/test_chaos_tools.py`](tests/test_chaos_tools.py) — the fully automatic pipeline recovers a Lyapunov exponent within ~5% of the textbook 0.906 and a correlation dimension within ~5% of the textbook 2.05, from `x(t)` alone, never `y` or `z`. It's also checked against a periodic signal (Lyapunov exponent near zero, dimension near 1) and pure noise (false-nearest-neighbors never collapses to a small dimension; correlation dimension keeps climbing instead of leveling off) — the actual job these tools do is telling those three apart.
+
+```bash
+pip install -e ".[dev]"
+pytest
+```
+
+[`notebooks/analyze_your_data.ipynb`](notebooks/analyze_your_data.ipynb) runs the full pipeline against Lorenz with every plot included, then hands you a template cell to drop in your own CSV.
+
+*A caveat worth being upfront about: both the Lyapunov exponent and the correlation dimension fundamentally require picking a "scaling region" off a curve — a place where the signal is genuinely linear, between a noisy short-time transient and a large-scale saturation — and no fully automatic method for this is bulletproof for every possible dataset. The defaults here use a more robust search than a naive fit (finding the longest stretch of consistent local slope, not just the single window with lowest residual, which turns out to reliably get fooled by brief inflection points elsewhere on the curve), validated against the cases above — but both functions always return the full curve alongside the estimate specifically so you can look at the shape yourself and override `fit_range` if it looks off. That's not a limitation of this implementation; it's genuinely how this class of method works.*
 
 ---
 

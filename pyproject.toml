@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chaos-tools"
+version = "0.1.0"
+description = "Research-grade chaos analysis for any scalar time series: phase-space reconstruction, largest Lyapunov exponent, correlation dimension, recurrence plots."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [{ name = "Jincheng (Jeffery) Rao" }]
+keywords = [
+    "chaos-theory",
+    "nonlinear-dynamics",
+    "lyapunov-exponent",
+    "correlation-dimension",
+    "phase-space-reconstruction",
+    "recurrence-plot",
+    "time-series-analysis",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+]
+
+[project.optional-dependencies]
+notebook = ["matplotlib>=3.7", "jupyter>=1.0", "ipykernel>=6.0", "nbformat>=5.0", "nbconvert>=7.0"]
+dev = ["pytest>=7.0"]
+
+[project.urls]
+Homepage = "https://github.com/jinchen7-cmd/Chaos"
+Repository = "https://github.com/jinchen7-cmd/Chaos"
+Issues = "https://github.com/jinchen7-cmd/Chaos/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["chaos_tools"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
